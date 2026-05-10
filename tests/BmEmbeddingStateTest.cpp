@@ -6,49 +6,134 @@
 
 using namespace bm;
 
-BM_TEST(BmEmbeddingStateCopiesChildrenSortedByLowpoint) {
-    Graph g(4);
-    g.addEdge(0, 1);
-    g.addEdge(0, 2);
-    g.addEdge(2, 3);
-    g.addEdge(3, 0);
+BM_TEST(BmEmbeddingStateInitializesSeparatedDfsChildren) {
+    Graph graph(4);
+    graph.addEdge(0, 1);
+    graph.addEdge(0, 2);
+    graph.addEdge(0, 3);
 
     DfsPreprocessor preprocessor;
-    DfsInfo dfsInfo = preprocessor.run(g);
+    const DfsInfo dfsInfo = preprocessor.run(graph);
 
-    BmEmbeddingState state(g, dfsInfo);
+    BmEmbeddingState state(graph, dfsInfo);
 
-    for (int v = 0; v < g.vertexCount(); ++v) {
-        BM_ASSERT(state.vertexState(v).separatedDfsChildList ==
-                  dfsInfo.childrenSortedByLowpoint[v]);
-    }
+    BM_ASSERT(state.separatedDfsChildren(0) == dfsInfo.childrenSortedByLowpoint[0]);
+}
+
+BM_TEST(BmEmbeddingStateRemovesSeparatedDfsChild) {
+    Graph graph(4);
+    graph.addEdge(0, 1);
+    graph.addEdge(0, 2);
+    graph.addEdge(0, 3);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    state.removeSeparatedDfsChild(0, 2);
+
+    const auto children = state.separatedDfsChildren(0);
+
+    BM_ASSERT(children.size() == 2);
+    BM_ASSERT(state.firstSeparatedDfsChild(0) != -1);
 }
 
 BM_TEST(BmEmbeddingStateDetectsExternalActivityFromLeastAncestor) {
-    Graph g(3);
-    g.addEdge(0, 1);
-    g.addEdge(1, 2);
-    g.addEdge(2, 0);
+    Graph graph(3);
+    graph.addEdge(0, 1);
+    graph.addEdge(1, 2);
+    graph.addEdge(2, 0);
 
     DfsPreprocessor preprocessor;
-    DfsInfo dfsInfo = preprocessor.run(g);
+    const DfsInfo dfsInfo = preprocessor.run(graph);
 
-    BmEmbeddingState state(g, dfsInfo);
+    BmEmbeddingState state(graph, dfsInfo);
 
-    // During processing of vertex 1, vertex 2 is externally active
-    // because it has a back edge to 0, which is an ancestor of 1.
     BM_ASSERT(state.isExternallyActive(2, 1));
 }
 
 BM_TEST(BmEmbeddingStateDoesNotMarkInactiveLeafAsExternallyActive) {
-    Graph g(3);
-    g.addEdge(0, 1);
-    g.addEdge(1, 2);
+    Graph graph(3);
+    graph.addEdge(0, 1);
+    graph.addEdge(1, 2);
 
     DfsPreprocessor preprocessor;
-    DfsInfo dfsInfo = preprocessor.run(g);
+    const DfsInfo dfsInfo = preprocessor.run(graph);
 
-    BmEmbeddingState state(g, dfsInfo);
+    BmEmbeddingState state(graph, dfsInfo);
 
     BM_ASSERT(!state.isExternallyActive(2, 1));
+}
+
+BM_TEST(BmEmbeddingStateCreatesTreeEdgeBicomp) {
+    Graph graph(3);
+    const int edge01 = graph.addEdge(0, 1);
+    const int edge12 = graph.addEdge(1, 2);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    const int root1 = state.createTreeEdgeBicomp(0, 1);
+    const int root2 = state.createTreeEdgeBicomp(1, 2);
+
+    BM_ASSERT(root1 != -1);
+    BM_ASSERT(root2 != -1);
+    BM_ASSERT(root1 != root2);
+
+    BM_ASSERT(state.bicompRootCount() == 2);
+
+    BM_ASSERT(state.rootForChild(1) == root1);
+    BM_ASSERT(state.rootForChild(2) == root2);
+
+    BM_ASSERT(state.bicompRoot(root1).parentVertex == 0);
+    BM_ASSERT(state.bicompRoot(root1).childVertex == 1);
+    BM_ASSERT(state.bicompRoot(root1).treeEdgeId == edge01);
+
+    BM_ASSERT(state.bicompRoot(root2).parentVertex == 1);
+    BM_ASSERT(state.bicompRoot(root2).childVertex == 2);
+    BM_ASSERT(state.bicompRoot(root2).treeEdgeId == edge12);
+}
+
+BM_TEST(BmEmbeddingStateDoesNotDuplicateTreeEdgeBicomp) {
+    Graph graph(2);
+    graph.addEdge(0, 1);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    const int firstRoot = state.createTreeEdgeBicomp(0, 1);
+    const int secondRoot = state.createTreeEdgeBicomp(0, 1);
+
+    BM_ASSERT(firstRoot == secondRoot);
+    BM_ASSERT(state.bicompRootCount() == 1);
+}
+
+BM_TEST(BmEmbeddingStateCreatesTreeBicompsInReverseDfiOrder) {
+    Graph graph(4);
+    graph.addEdge(0, 1);
+    graph.addEdge(1, 2);
+    graph.addEdge(2, 3);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    for (int i = dfsInfo.vertexCount - 1; i >= 0; --i) {
+        const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(i)];
+
+        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+            state.createTreeEdgeBicomp(vertex, child);
+        }
+    }
+
+    BM_ASSERT(state.bicompRootCount() == 3);
+    BM_ASSERT(state.rootForChild(1) != -1);
+    BM_ASSERT(state.rootForChild(2) != -1);
+    BM_ASSERT(state.rootForChild(3) != -1);
 }
