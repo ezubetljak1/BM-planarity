@@ -65,7 +65,6 @@ private:
 
     void initialize();
     void dfs(int v, int componentId);
-    int opposite(int edgeId, int vertex) const;
 
     void registerBackEdge(int edgeId, int ancestor, int descendant);
     void updateLeastAncestor(int v, int ancestorVertex, int edgeId);
