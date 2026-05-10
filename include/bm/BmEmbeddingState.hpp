@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "bm/BmPartialEmbedding.hpp"
 #include "bm/DfsPreprocessor.hpp"
 #include "bm/Graph.hpp"
 #include "bm/SeparatedDfsChildLists.hpp"
@@ -38,6 +39,13 @@ struct BmBicompRoot {
 
     // Later used when implementing lazy flipping.
     int rootEdgeSign = 1;
+
+    // Internal embedding objects.
+    int internalRootVertexId = -1;
+    int internalChildVertexId = -1;
+    int embeddedTreeEdgeId = -1;
+    int rootToChildHalfEdgeId = -1;
+    int childToRootHalfEdgeId = -1;
 };
 
 class BmEmbeddingState {
@@ -49,6 +57,8 @@ public:
 
     BmVertexState& vertexState(int vertex);
     const BmVertexState& vertexState(int vertex) const;
+
+    const BmPartialEmbedding& partialEmbedding() const;
 
     bool isExternallyActive(int vertex, int currentVertex) const;
 
@@ -70,6 +80,8 @@ private:
 
     std::vector<BmVertexState> vertexStates_;
     SeparatedDfsChildLists separatedDfsChildLists_;
+
+    BmPartialEmbedding partialEmbedding_;
 
     std::vector<BmBicompRoot> bicompRoots_;
 

@@ -137,3 +137,39 @@ BM_TEST(BmEmbeddingStateCreatesTreeBicompsInReverseDfiOrder) {
     BM_ASSERT(state.rootForChild(2) != -1);
     BM_ASSERT(state.rootForChild(3) != -1);
 }
+
+BM_TEST(BmEmbeddingStateTreeBicompCreatesInternalEmbeddingObjects) {
+    Graph graph(2);
+    const int edge01 = graph.addEdge(0, 1);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    const int rootId = state.createTreeEdgeBicomp(0, 1);
+    const BmBicompRoot& root = state.bicompRoot(rootId);
+
+    BM_ASSERT(root.treeEdgeId == edge01);
+    BM_ASSERT(root.internalRootVertexId != -1);
+    BM_ASSERT(root.internalChildVertexId != -1);
+    BM_ASSERT(root.embeddedTreeEdgeId != -1);
+    BM_ASSERT(root.rootToChildHalfEdgeId != -1);
+    BM_ASSERT(root.childToRootHalfEdgeId != -1);
+
+    const BmPartialEmbedding& embedding = state.partialEmbedding();
+
+    BM_ASSERT(embedding.internalVertex(root.internalRootVertexId).kind ==
+              BmInternalVertexKind::BicompRoot);
+
+    BM_ASSERT(embedding.internalVertex(root.internalChildVertexId).kind ==
+              BmInternalVertexKind::Original);
+
+    BM_ASSERT(embedding.embeddedEdge(root.embeddedTreeEdgeId).originalEdgeId == edge01);
+
+    const auto face = embedding.externalFaceVertices(root.rootToChildHalfEdgeId, 4);
+
+    BM_ASSERT(face.size() == 2);
+    BM_ASSERT(face[0] == root.internalRootVertexId);
+    BM_ASSERT(face[1] == root.internalChildVertexId);
+}

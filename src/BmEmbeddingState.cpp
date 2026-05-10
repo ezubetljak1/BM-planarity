@@ -6,8 +6,8 @@ namespace bm {
 
 BmEmbeddingState::BmEmbeddingState(const Graph& graph, const DfsInfo& dfsInfo)
     : graph_(&graph), dfsInfo_(&dfsInfo), vertexStates_(graph.vertexCount()),
-      separatedDfsChildLists_(dfsInfo), rootForChild_(graph.vertexCount(), -1),
-      childRoots_(graph.vertexCount()) {
+      separatedDfsChildLists_(dfsInfo), partialEmbedding_(graph.vertexCount()),
+      rootForChild_(graph.vertexCount(), -1), childRoots_(graph.vertexCount()) {
 
     for (int v = 0; v < graph.vertexCount(); ++v)
         vertexStates_[v].vertex = v;
@@ -29,6 +29,10 @@ BmVertexState& BmEmbeddingState::vertexState(int vertex) {
 const BmVertexState& BmEmbeddingState::vertexState(int vertex) const {
     validateVertex(vertex);
     return vertexStates_[vertex];
+}
+
+const BmPartialEmbedding& BmEmbeddingState::partialEmbedding() const {
+    return partialEmbedding_;
 }
 
 bool BmEmbeddingState::isExternallyActive(int vertex, int currentVertex) const {
@@ -88,6 +92,15 @@ int BmEmbeddingState::createTreeEdgeBicomp(int parentVertex, int childVertex) {
     root.treeEdgeId = treeEdgeId;
     root.active = true;
     root.rootEdgeSign = 1;
+
+    BmTreeBicompEmbedding treeEmbedding =
+        partialEmbedding_.createTreeEdgeBicomp(root.id, parentVertex, childVertex, treeEdgeId);
+
+    root.internalRootVertexId = treeEmbedding.rootInternalVertexId;
+    root.internalChildVertexId = treeEmbedding.childInternalVertexId;
+    root.embeddedTreeEdgeId = treeEmbedding.embeddedEdgeId;
+    root.rootToChildHalfEdgeId = treeEmbedding.rootToChildHalfEdgeId;
+    root.childToRootHalfEdgeId = treeEmbedding.childToRootHalfEdgeId;
 
     bicompRoots_.push_back(root);
 
