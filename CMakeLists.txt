@@ -12,6 +12,8 @@ add_library(bm_planarity
     src/DfsPreprocessor.cpp
     src/BmEmbeddingState.cpp
     src/SeparatedDfsChildLists.cpp
+    src/SimpleGraphValidator.cpp
+    src/BoyerMyrvoldPlanarity.cpp
 )
 
 target_include_directories(bm_planarity
@@ -26,6 +28,8 @@ add_executable(bm_planarity_tests
     tests/DfsPreprocessorTest.cpp
     tests/BmEmbeddingStateTest.cpp
     tests/SeparatedDfsChildListsTest.cpp
+    tests/SimpleGraphValidatorTest.cpp
+    tests/BoyerMyrvoldPlanarityTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
