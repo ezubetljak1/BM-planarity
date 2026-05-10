@@ -10,6 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(bm_planarity
     src/Graph.cpp
     src/DfsPreprocessor.cpp
+    src/BmEmbeddingState.cpp
 )
 
 target_include_directories(bm_planarity
@@ -22,6 +23,7 @@ add_executable(bm_planarity_tests
     tests/TestMain.cpp
     tests/GraphTest.cpp
     tests/DfsPreprocessorTest.cpp
+    tests/BmEmbeddingStateTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
