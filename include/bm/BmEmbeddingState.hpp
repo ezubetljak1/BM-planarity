@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <deque>
 
 #include "bm/BmPartialEmbedding.hpp"
 #include "bm/DfsPreprocessor.hpp"
@@ -20,7 +21,7 @@ struct BmVertexState {
 
     // Roots of child biconnected components that are pertinent.
     // Walkup will fill this later.
-    std::vector<int> pertinentRoots;
+    std::deque<int> pertinentRoots;
 };
 
 struct BmBicompRoot {
@@ -73,6 +74,28 @@ public:
 
     int rootForChild(int childVertex) const;
     const std::vector<int>& childRoots(int vertex) const;
+
+    bool hasBackedgeFlag(int vertex) const;
+    void markBackedgeFlag(int vertex);
+    void clearBackedgeFlag(int vertex);
+
+    bool isVisitedInStep(int vertex, int currentVertex) const;
+    void markVisitedInStep(int vertex, int currentVertex);
+
+    bool isPertinent(int vertex) const;
+    bool isInternallyActive(int vertex, int currentVertex) const;
+    bool isInactive(int vertex, int currentVertex) const;
+
+    bool isRootExternallyActive(int rootId, int currentVertex) const;
+    void addPertinentRoot(int vertex, int rootId, int currentVertex);
+
+    bool hasPertinentRoots(int vertex) const;
+    int firstPertinentRoot(int vertex) const;
+    void removeFirstPertinentRoot(int vertex);
+
+    bool isInternalBicompRootVertex(int internalVertexId) const;
+    int bicompRootIdForInternalVertex(int internalVertexId) const;
+    int originalVertexForInternalVertex(int internalVertexId) const;
 
 private:
     const Graph* graph_ = nullptr;

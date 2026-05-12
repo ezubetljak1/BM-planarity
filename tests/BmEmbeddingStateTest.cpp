@@ -173,3 +173,66 @@ BM_TEST(BmEmbeddingStateTreeBicompCreatesInternalEmbeddingObjects) {
     BM_ASSERT(face[0] == root.internalRootVertexId);
     BM_ASSERT(face[1] == root.internalChildVertexId);
 }
+
+BM_TEST(BmEmbeddingStateMarksBackedgeFlag) {
+    Graph graph(2);
+    graph.addEdge(0, 1);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    BM_ASSERT(!state.hasBackedgeFlag(1));
+
+    state.markBackedgeFlag(1);
+
+    BM_ASSERT(state.hasBackedgeFlag(1));
+    BM_ASSERT(state.isPertinent(1));
+
+    state.clearBackedgeFlag(1);
+
+    BM_ASSERT(!state.hasBackedgeFlag(1));
+    BM_ASSERT(!state.isPertinent(1));
+}
+
+BM_TEST(BmEmbeddingStateMarksVisitedInStepByCurrentDfi) {
+    Graph graph(3);
+    graph.addEdge(0, 1);
+    graph.addEdge(1, 2);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    BM_ASSERT(!state.isVisitedInStep(2, 1));
+
+    state.markVisitedInStep(2, 1);
+
+    BM_ASSERT(state.isVisitedInStep(2, 1));
+}
+
+BM_TEST(BmEmbeddingStateAddsPertinentRoot) {
+    Graph graph(2);
+    graph.addEdge(0, 1);
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BmEmbeddingState state(graph, dfsInfo);
+
+    const int rootId = state.createTreeEdgeBicomp(0, 1);
+
+    BM_ASSERT(!state.hasPertinentRoots(0));
+
+    state.addPertinentRoot(0, rootId, 0);
+
+    BM_ASSERT(state.hasPertinentRoots(0));
+    BM_ASSERT(state.firstPertinentRoot(0) == rootId);
+    BM_ASSERT(state.isPertinent(0));
+
+    state.removeFirstPertinentRoot(0);
+
+    BM_ASSERT(!state.hasPertinentRoots(0));
+}

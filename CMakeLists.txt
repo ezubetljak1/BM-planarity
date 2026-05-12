@@ -15,6 +15,7 @@ add_library(bm_planarity
     src/SimpleGraphValidator.cpp
     src/BoyerMyrvoldPlanarity.cpp
     src/BmPartialEmbedding.cpp
+    src/BmExternalFaceTraversal.cpp
 )
 
 target_include_directories(bm_planarity
@@ -32,6 +33,7 @@ add_executable(bm_planarity_tests
     tests/SimpleGraphValidatorTest.cpp
     tests/BoyerMyrvoldPlanarityTest.cpp
     tests/BmPartialEmbeddingTest.cpp
+    tests/BmExternalFaceTraversalTest.cpp
 )
 
 target_include_directories(bm_planarity_tests

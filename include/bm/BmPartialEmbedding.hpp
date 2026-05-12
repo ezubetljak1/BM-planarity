@@ -79,6 +79,22 @@ public:
     // debug/test helper; do not use this in Walkup/Walkdown hot loops later
     std::vector<int> externalFaceVertices(int startHalfEdgeId, int maxSteps) const;
 
+    int nextOnExternalFace(int halfEdgeId) const;
+    int previousOnExternalFace(int halfEdgeId) const;
+    int twinHalfEdge(int halfEdgeId) const;
+
+    int externalFaceHalfEdge(int internalVertexId, int side) const;
+    int externalFaceLinkIndex(int internalVertexId, int halfEdgeId) const;
+    int oppositeExternalFaceHalfEdge(int internalVertexId, int halfEdgeId) const;
+
+    bool isBicompRootVertex(int internalVertexId) const;
+    int bicompRootIdForInternalVertex(int internalVertexId) const;
+    int originalVertexForInternalVertex(int internalVertexId) const;
+
+    void setExternalFaceHalfEdges(int internalVertexId, int firstHalfEdgeId, int secondHalfEdgeId);
+
+    void linkExternalFaceHalfEdges(int fromHalfEdgeId, int toHalfEdgeId);
+
 private:
     std::vector<BmInternalVertex> internalVertices_;
     std::vector<BmEmbeddedEdge> embeddedEdges_;

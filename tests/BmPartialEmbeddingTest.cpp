@@ -66,3 +66,39 @@ BM_TEST(BmPartialEmbeddingLinksTreeBicompExternalFace) {
     BM_ASSERT(face[0] == tree.rootInternalVertexId);
     BM_ASSERT(face[1] == tree.childInternalVertexId);
 }
+
+BM_TEST(BmPartialEmbeddingProvidesExternalFaceHelpers) {
+    BmPartialEmbedding embedding(2);
+
+    const BmTreeBicompEmbedding tree = embedding.createTreeEdgeBicomp(0, 0, 1, 7);
+
+    BM_ASSERT(embedding.twinHalfEdge(tree.rootToChildHalfEdgeId) == tree.childToRootHalfEdgeId);
+
+    BM_ASSERT(embedding.twinHalfEdge(tree.childToRootHalfEdgeId) == tree.rootToChildHalfEdgeId);
+
+    BM_ASSERT(embedding.nextOnExternalFace(tree.rootToChildHalfEdgeId) ==
+              tree.childToRootHalfEdgeId);
+
+    BM_ASSERT(embedding.previousOnExternalFace(tree.rootToChildHalfEdgeId) ==
+              tree.childToRootHalfEdgeId);
+
+    BM_ASSERT(embedding.externalFaceHalfEdge(tree.rootInternalVertexId, 0) ==
+              tree.rootToChildHalfEdgeId);
+
+    BM_ASSERT(embedding.externalFaceHalfEdge(tree.childInternalVertexId, 0) ==
+              tree.childToRootHalfEdgeId);
+}
+
+BM_TEST(BmPartialEmbeddingProvidesRootLookupHelpers) {
+    BmPartialEmbedding embedding(2);
+
+    const BmTreeBicompEmbedding tree = embedding.createTreeEdgeBicomp(3, 0, 1, 7);
+
+    BM_ASSERT(embedding.isBicompRootVertex(tree.rootInternalVertexId));
+    BM_ASSERT(!embedding.isBicompRootVertex(tree.childInternalVertexId));
+
+    BM_ASSERT(embedding.bicompRootIdForInternalVertex(tree.rootInternalVertexId) == 3);
+
+    BM_ASSERT(embedding.originalVertexForInternalVertex(tree.rootInternalVertexId) == 0);
+    BM_ASSERT(embedding.originalVertexForInternalVertex(tree.childInternalVertexId) == 1);
+}

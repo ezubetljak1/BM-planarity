@@ -131,6 +131,127 @@ const std::vector<int>& BmEmbeddingState::childRoots(int vertex) const {
     return childRoots_[vertex];
 }
 
+bool BmEmbeddingState::hasBackedgeFlag(int vertex) const {
+    validateVertex(vertex);
+    return vertexStates_[vertex].backedgeFlag;
+}
+
+void BmEmbeddingState::markBackedgeFlag(int vertex) {
+    validateVertex(vertex);
+    vertexStates_[vertex].backedgeFlag = true;
+}
+
+void BmEmbeddingState::clearBackedgeFlag(int vertex) {
+    validateVertex(vertex);
+    vertexStates_[vertex].backedgeFlag = false;
+}
+
+bool BmEmbeddingState::isVisitedInStep(int vertex, int currentVertex) const {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    const int currentDfi = dfsInfo_->dfsIndex[currentVertex];
+
+    return vertexStates_[vertex].visitedInStep == currentDfi;
+}
+
+void BmEmbeddingState::markVisitedInStep(int vertex, int currentVertex) {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    const int currentDfi = dfsInfo_->dfsIndex[currentVertex];
+
+    vertexStates_[vertex].visitedInStep = currentDfi;
+}
+
+bool BmEmbeddingState::isPertinent(int vertex) const {
+    validateVertex(vertex);
+
+    const BmVertexState& state = vertexStates_[vertex];
+
+    return state.backedgeFlag || !state.pertinentRoots.empty();
+}
+
+bool BmEmbeddingState::isInternallyActive(int vertex, int currentVertex) const {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    return isPertinent(vertex) && !isExternallyActive(vertex, currentVertex);
+}
+
+bool BmEmbeddingState::isInactive(int vertex, int currentVertex) const {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    return !isPertinent(vertex) && !isExternallyActive(vertex, currentVertex);
+}
+
+bool BmEmbeddingState::isRootExternallyActive(int rootId, int currentVertex) const {
+    validateVertex(currentVertex);
+
+    const BmBicompRoot& root = bicompRoot(rootId);
+
+    const int child = root.childVertex;
+    const int currentDfi = dfsInfo_->dfsIndex[currentVertex];
+
+    return dfsInfo_->lowpointDfi[child] < currentDfi;
+}
+
+void BmEmbeddingState::addPertinentRoot(int vertex, int rootId, int currentVertex) {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    const BmBicompRoot& root = bicompRoot(rootId);
+
+    if (!root.active)
+        throw std::invalid_argument("Cannot add inactive bicomp root as pertinent.");
+
+    if (isRootExternallyActive(rootId, currentVertex))
+        vertexStates_[vertex].pertinentRoots.push_back(rootId);
+    else
+        vertexStates_[vertex].pertinentRoots.push_front(rootId);
+}
+
+bool BmEmbeddingState::hasPertinentRoots(int vertex) const {
+    validateVertex(vertex);
+
+    return !vertexStates_[vertex].pertinentRoots.empty();
+}
+
+int BmEmbeddingState::firstPertinentRoot(int vertex) const {
+    validateVertex(vertex);
+
+    const auto& roots = vertexStates_[vertex].pertinentRoots;
+
+    if (roots.empty())
+        return -1;
+
+    return roots.front();
+}
+
+void BmEmbeddingState::removeFirstPertinentRoot(int vertex) {
+    validateVertex(vertex);
+
+    auto& roots = vertexStates_[vertex].pertinentRoots;
+
+    if (roots.empty())
+        throw std::logic_error("Vertex has no pertinent roots.");
+
+    roots.pop_front();
+}
+
+bool BmEmbeddingState::isInternalBicompRootVertex(int internalVertexId) const {
+    return partialEmbedding_.isBicompRootVertex(internalVertexId);
+}
+
+int BmEmbeddingState::bicompRootIdForInternalVertex(int internalVertexId) const {
+    return partialEmbedding_.bicompRootIdForInternalVertex(internalVertexId);
+}
+
+int BmEmbeddingState::originalVertexForInternalVertex(int internalVertexId) const {
+    return partialEmbedding_.originalVertexForInternalVertex(internalVertexId);
+}
+
 void BmEmbeddingState::validateVertex(int vertex) const {
     if (vertex < 0 || vertex >= vertexStates_.size())
         throw std::out_of_range("Invalid vertex id.");

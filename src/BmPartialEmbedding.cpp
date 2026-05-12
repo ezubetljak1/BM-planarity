@@ -157,6 +157,96 @@ int BmPartialEmbedding::createBicompRootVertex(int bicompRootId, int parentVerte
     return rootVertex.id;
 }
 
+int BmPartialEmbedding::nextOnExternalFace(int halfEdgeId) const {
+    validateHalfEdge(halfEdgeId);
+    return halfEdges_[halfEdgeId].nextOnExternalFace;
+}
+
+int BmPartialEmbedding::previousOnExternalFace(int halfEdgeId) const {
+    validateHalfEdge(halfEdgeId);
+    return halfEdges_[halfEdgeId].previousOnExternalFace;
+}
+
+int BmPartialEmbedding::twinHalfEdge(int halfEdgeId) const {
+    validateHalfEdge(halfEdgeId);
+    return halfEdges_[halfEdgeId].twin;
+}
+
+int BmPartialEmbedding::externalFaceHalfEdge(int internalVertexId, int side) const {
+    validateInternalVertex(internalVertexId);
+
+    if (side < 0 || side > 1)
+        throw std::out_of_range("External face side must be 0 or 1.");
+
+    return internalVertices_[internalVertexId].externalFaceHalfEdges[side];
+}
+
+int BmPartialEmbedding::externalFaceLinkIndex(int internalVertexId, int halfEdgeId) const {
+    validateInternalVertex(internalVertexId);
+    validateHalfEdge(halfEdgeId);
+
+    const auto& links = internalVertices_[internalVertexId].externalFaceHalfEdges;
+
+    if (links[0] == halfEdgeId)
+        return 0;
+
+    if (links[1] == halfEdgeId)
+        return 1;
+
+    throw std::invalid_argument("Half-edge is not an external-face link of this vertex.");
+}
+
+bool BmPartialEmbedding::isBicompRootVertex(int internalVertexId) const {
+    validateInternalVertex(internalVertexId);
+
+    return internalVertices_[internalVertexId].kind == BmInternalVertexKind::BicompRoot;
+}
+
+int BmPartialEmbedding::oppositeExternalFaceHalfEdge(int internalVertexId, int halfEdgeId) const {
+    const int linkIndex = externalFaceLinkIndex(internalVertexId, halfEdgeId);
+    const int oppositeIndex = 1 - linkIndex;
+
+    return internalVertices_[internalVertexId].externalFaceHalfEdges[oppositeIndex];
+}
+
+int BmPartialEmbedding::bicompRootIdForInternalVertex(int internalVertexId) const {
+    validateInternalVertex(internalVertexId);
+
+    const auto& vertex = internalVertices_[internalVertexId];
+
+    if (vertex.kind != BmInternalVertexKind::BicompRoot)
+        throw std::invalid_argument("Internal vertex is not a bicomp root vertex.");
+
+    return vertex.bicompRootId;
+}
+
+int BmPartialEmbedding::originalVertexForInternalVertex(int internalVertexId) const {
+    validateInternalVertex(internalVertexId);
+
+    return internalVertices_[internalVertexId].originalVertex;
+}
+
+void BmPartialEmbedding::setExternalFaceHalfEdges(int internalVertexId, int firstHalfEdgeId,
+                                                  int secondHalfEdgeId) {
+    validateInternalVertex(internalVertexId);
+
+    if (firstHalfEdgeId != -1)
+        validateHalfEdge(firstHalfEdgeId);
+
+    if (secondHalfEdgeId != -1)
+        validateHalfEdge(secondHalfEdgeId);
+
+    internalVertices_[internalVertexId].externalFaceHalfEdges = {firstHalfEdgeId, secondHalfEdgeId};
+}
+
+void BmPartialEmbedding::linkExternalFaceHalfEdges(int fromHalfEdgeId, int toHalfEdgeId) {
+    validateHalfEdge(fromHalfEdgeId);
+    validateHalfEdge(toHalfEdgeId);
+
+    halfEdges_[fromHalfEdgeId].nextOnExternalFace = toHalfEdgeId;
+    halfEdges_[toHalfEdgeId].previousOnExternalFace = fromHalfEdgeId;
+}
+
 void BmPartialEmbedding::validateOriginalVertex(int vertex) const {
     if (vertex < 0 || vertex >= originalToInternalVertex_.size())
         throw std::out_of_range("Invalid original vertex id.");
