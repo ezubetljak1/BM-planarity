@@ -7,7 +7,8 @@ namespace bm {
 BmEmbeddingState::BmEmbeddingState(const Graph& graph, const DfsInfo& dfsInfo)
     : graph_(&graph), dfsInfo_(&dfsInfo), vertexStates_(graph.vertexCount()),
       separatedDfsChildLists_(dfsInfo), partialEmbedding_(graph.vertexCount()),
-      rootForChild_(graph.vertexCount(), -1), childRoots_(graph.vertexCount()) {
+      rootForChild_(graph.vertexCount(), -1), childRoots_(graph.vertexCount()),
+      internalVertexVisitedInStep_(graph.vertexCount(), -1) {
 
     for (int v = 0; v < graph.vertexCount(); ++v)
         vertexStates_[v].vertex = v;
@@ -96,6 +97,7 @@ int BmEmbeddingState::createTreeEdgeBicomp(int parentVertex, int childVertex) {
     BmTreeBicompEmbedding treeEmbedding =
         partialEmbedding_.createTreeEdgeBicomp(root.id, parentVertex, childVertex, treeEdgeId);
 
+    ensureInternalVisitedCapacity();
     root.internalRootVertexId = treeEmbedding.rootInternalVertexId;
     root.internalChildVertexId = treeEmbedding.childInternalVertexId;
     root.embeddedTreeEdgeId = treeEmbedding.embeddedEdgeId;
@@ -255,6 +257,39 @@ int BmEmbeddingState::originalVertexForInternalVertex(int internalVertexId) cons
 void BmEmbeddingState::validateVertex(int vertex) const {
     if (vertex < 0 || vertex >= vertexStates_.size())
         throw std::out_of_range("Invalid vertex id.");
+}
+
+bool BmEmbeddingState::isInternalVertexVisitedInStep(int internalVertexId,
+                                                     int currentVertex) const {
+    validateInternalVertex(internalVertexId);
+    validateVertex(currentVertex);
+
+    const int currentDfi = dfsInfo_->dfsIndex[currentVertex];
+
+    return internalVertexVisitedInStep_[internalVertexId] == currentDfi;
+}
+
+void BmEmbeddingState::markInternalVertexVisitedInStep(int internalVertexId, int currentVertex) {
+    validateInternalVertex(internalVertexId);
+    validateVertex(currentVertex);
+
+    const int currentDfi = dfsInfo_->dfsIndex[currentVertex];
+
+    internalVertexVisitedInStep_[internalVertexId] = currentDfi;
+}
+
+void BmEmbeddingState::ensureInternalVisitedCapacity() {
+    const int neededSize = partialEmbedding_.internalVertexCount();
+
+    if (static_cast<int>(internalVertexVisitedInStep_.size()) < neededSize) {
+        internalVertexVisitedInStep_.resize(neededSize, -1);
+    }
+}
+
+void BmEmbeddingState::validateInternalVertex(int internalVertexId) const {
+    if (internalVertexId < 0 || internalVertexId >= partialEmbedding_.internalVertexCount()) {
+        throw std::out_of_range("Invalid internal vertex id.");
+    }
 }
 
 } // namespace bm

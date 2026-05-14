@@ -97,6 +97,10 @@ public:
     int bicompRootIdForInternalVertex(int internalVertexId) const;
     int originalVertexForInternalVertex(int internalVertexId) const;
 
+    bool isInternalVertexVisitedInStep(int internalVertexId, int currentVertex) const;
+    void markInternalVertexVisitedInStep(int internalVertexId, int currentVertex);
+    void validateVertex(int vertex) const;
+
 private:
     const Graph* graph_ = nullptr;
     const DfsInfo* dfsInfo_ = nullptr;
@@ -114,7 +118,10 @@ private:
     // Non-virtual vertex v -> roots v^c of its child biconnected components.
     std::vector<std::vector<int>> childRoots_;
 
-    void validateVertex(int vertex) const;
+    std::vector<int> internalVertexVisitedInStep_;
+
+    void ensureInternalVisitedCapacity();
+    void validateInternalVertex(int internalVertexId) const;
 };
 
 } // namespace bm
