@@ -15,6 +15,28 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph &graph) const {
 
     // Placeholder until Walkup/Walkdown and recovery are implemented
     return makePlaceholderPlanarResult(graph);
+
+    /*
+    nakon full impl:
+    BmWalkup walkup;
+
+    for (int dfi = dfsInfo.vertexCount - 1; dfi >= 0; --dfi) {
+        const int v = dfsInfo.vertexAtDfsIndex[dfi];
+
+        for (int child : dfsInfo.children[v]) {
+            state.createTreeEdgeBicomp(v, child);
+        }
+
+        for (int backEdgeIndex : dfsInfo.backEdgeIndicesFromAncestor[v]) {
+            const DfsBackEdge& backEdge = dfsInfo.backEdges[backEdgeIndex];
+            walkup.run(state, v, backEdge.descendant);
+        }
+
+        // Walkdown ide ovdje kasnije:
+        // for each DFS child c of v:
+        //     Walkdown(v^c)
+    }
+    */
 }
 
 void BoyerMyrvoldPlanarity::createInitialTreeBicomps(const DfsInfo &dfsInfo, BmEmbeddingState &state) {

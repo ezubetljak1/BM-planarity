@@ -133,19 +133,23 @@ const std::vector<int>& BmEmbeddingState::childRoots(int vertex) const {
     return childRoots_[vertex];
 }
 
-bool BmEmbeddingState::hasBackedgeFlag(int vertex) const {
+bool BmEmbeddingState::hasBackedgeFlag(int vertex, int currentVertex) const {
     validateVertex(vertex);
-    return vertexStates_[vertex].backedgeFlag;
+    validateVertex(currentVertex);
+
+    return vertexStates_[vertex].backedgeFlagDfi == dfsInfo_->dfsIndex[currentVertex];
 }
 
-void BmEmbeddingState::markBackedgeFlag(int vertex) {
+void BmEmbeddingState::markBackedgeFlag(int vertex, int currentVertex) {
     validateVertex(vertex);
-    vertexStates_[vertex].backedgeFlag = true;
+    validateVertex(currentVertex);
+
+    vertexStates_[vertex].backedgeFlagDfi = dfsInfo_->dfsIndex[currentVertex];
 }
 
 void BmEmbeddingState::clearBackedgeFlag(int vertex) {
     validateVertex(vertex);
-    vertexStates_[vertex].backedgeFlag = false;
+    vertexStates_[vertex].backedgeFlagDfi = -1;
 }
 
 bool BmEmbeddingState::isVisitedInStep(int vertex, int currentVertex) const {
@@ -166,26 +170,28 @@ void BmEmbeddingState::markVisitedInStep(int vertex, int currentVertex) {
     vertexStates_[vertex].visitedInStep = currentDfi;
 }
 
-bool BmEmbeddingState::isPertinent(int vertex) const {
+bool BmEmbeddingState::isPertinent(int vertex, int currentVertex) const {
     validateVertex(vertex);
+    validateVertex(currentVertex);
 
     const BmVertexState& state = vertexStates_[vertex];
 
-    return state.backedgeFlag || !state.pertinentRoots.empty();
+    return state.backedgeFlagDfi == dfsInfo_->dfsIndex[currentVertex] ||
+           !state.pertinentRoots.empty();
 }
 
 bool BmEmbeddingState::isInternallyActive(int vertex, int currentVertex) const {
     validateVertex(vertex);
     validateVertex(currentVertex);
 
-    return isPertinent(vertex) && !isExternallyActive(vertex, currentVertex);
+    return isPertinent(vertex, currentVertex) && !isExternallyActive(vertex, currentVertex);
 }
 
 bool BmEmbeddingState::isInactive(int vertex, int currentVertex) const {
     validateVertex(vertex);
     validateVertex(currentVertex);
 
-    return !isPertinent(vertex) && !isExternallyActive(vertex, currentVertex);
+    return !isPertinent(vertex, currentVertex) && !isExternallyActive(vertex, currentVertex);
 }
 
 bool BmEmbeddingState::isRootExternallyActive(int rootId, int currentVertex) const {
@@ -291,5 +297,10 @@ void BmEmbeddingState::validateInternalVertex(int internalVertexId) const {
         throw std::out_of_range("Invalid internal vertex id.");
     }
 }
+
+bool BmEmbeddingState::isBackedgeEndpointForCurrentVertex(int vertex, int currentVertex) const{
+    return hasBackedgeFlag(vertex, currentVertex);
+}
+
 
 } // namespace bm

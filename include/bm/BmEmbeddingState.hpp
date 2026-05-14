@@ -13,7 +13,7 @@ namespace bm {
 struct BmVertexState {
     int vertex = -1;
 
-    bool backedgeFlag = false;
+    int backedgeFlagDfi = -1;
 
     // visitedInStep == current DFI means visited.
     // This avoids clearing the array after each BM step.
@@ -75,14 +75,14 @@ public:
     int rootForChild(int childVertex) const;
     const std::vector<int>& childRoots(int vertex) const;
 
-    bool hasBackedgeFlag(int vertex) const;
-    void markBackedgeFlag(int vertex);
+    bool hasBackedgeFlag(int vertex, int currentVertex) const;
+    void markBackedgeFlag(int vertex, int currentVertex);
     void clearBackedgeFlag(int vertex);
 
     bool isVisitedInStep(int vertex, int currentVertex) const;
     void markVisitedInStep(int vertex, int currentVertex);
 
-    bool isPertinent(int vertex) const;
+    bool isPertinent(int vertex, int currentVertex) const;
     bool isInternallyActive(int vertex, int currentVertex) const;
     bool isInactive(int vertex, int currentVertex) const;
 
@@ -100,6 +100,7 @@ public:
     bool isInternalVertexVisitedInStep(int internalVertexId, int currentVertex) const;
     void markInternalVertexVisitedInStep(int internalVertexId, int currentVertex);
     void validateVertex(int vertex) const;
+    bool isBackedgeEndpointForCurrentVertex(int vertex, int currentVertex) const;
 
 private:
     const Graph* graph_ = nullptr;

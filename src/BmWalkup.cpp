@@ -9,7 +9,7 @@ void BmWalkup::run(BmEmbeddingState& state, int currentVertex, int descendantVer
     state.validateVertex(currentVertex);
     state.validateVertex(descendantVertex);
 
-    state.markBackedgeFlag(descendantVertex);
+    state.markBackedgeFlag(descendantVertex, currentVertex);
 
     const BmPartialEmbedding& embedding = state.partialEmbedding();
     BmExternalFaceTraversal traversal(embedding);
