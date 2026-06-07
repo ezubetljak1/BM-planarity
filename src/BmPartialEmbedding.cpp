@@ -107,6 +107,10 @@ BmTreeBicompEmbedding BmPartialEmbedding::createTreeEdgeBicomp(int bicompRootId,
 
     setExternalFaceHalfEdges(childInternalVertexId, childToRootHalfEdgeId, childToRootHalfEdgeId);
 
+    setExternalFaceNeighbors(rootInternalVertexId, childInternalVertexId, childInternalVertexId);
+
+    setExternalFaceNeighbors(childInternalVertexId, rootInternalVertexId, rootInternalVertexId);
+
     BmTreeBicompEmbedding result;
     result.rootInternalVertexId = rootInternalVertexId;
     result.childInternalVertexId = childInternalVertexId;
@@ -397,6 +401,7 @@ void BmPartialEmbedding::spliceAdjacencyLists(int targetInternalVertexId,
 
         source.firstIncidentHalfEdge = -1;
         source.externalFaceHalfEdges = {-1, -1};
+        source.externalFaceNeighbors = {-1, -1};
 
         return;
     }
@@ -425,6 +430,7 @@ void BmPartialEmbedding::spliceAdjacencyLists(int targetInternalVertexId,
 
     source.firstIncidentHalfEdge = -1;
     source.externalFaceHalfEdges = {-1, -1};
+    source.externalFaceNeighbors = {-1, -1};
 }
 
 void BmPartialEmbedding::swapExternalFaceLinks(int internalVertexId) {
@@ -432,6 +438,9 @@ void BmPartialEmbedding::swapExternalFaceLinks(int internalVertexId) {
 
     std::swap(internalVertices_[internalVertexId].externalFaceHalfEdges[0],
               internalVertices_[internalVertexId].externalFaceHalfEdges[1]);
+
+    std::swap(internalVertices_[internalVertexId].externalFaceNeighbors[0],
+              internalVertices_[internalVertexId].externalFaceNeighbors[1]);
 }
 
 void BmPartialEmbedding::reverseAdjacencyOrientation(int internalVertexId) {
@@ -596,7 +605,100 @@ int BmPartialEmbedding::addExternalFaceEdge(int firstInternalVertexId, int first
 
     insertHalfEdgeAtExternalFaceSide(secondInternalVertexId, edge.halfEdgeB, secondLinkIndex);
 
+    setExternalFaceNeighbor(firstInternalVertexId, firstLinkIndex, secondInternalVertexId);
+
+    setExternalFaceNeighbor(secondInternalVertexId, secondLinkIndex, firstInternalVertexId);
+
     return embeddedEdgeId;
+}
+
+int BmPartialEmbedding::externalFaceNeighbor(int internalVertexId, int side) const {
+    validateInternalVertex(internalVertexId);
+
+    if (side < 0 || side > 1) {
+        throw std::out_of_range("External face side must be 0 or 1.");
+    }
+
+    return internalVertices_[internalVertexId].externalFaceNeighbors[side];
+}
+
+int BmPartialEmbedding::externalFaceNeighborLinkIndex(int internalVertexId,
+                                                      int neighborInternalVertexId) const {
+    validateInternalVertex(internalVertexId);
+    validateInternalVertex(neighborInternalVertexId);
+
+    const auto& neighbors = internalVertices_[internalVertexId].externalFaceNeighbors;
+
+    if (neighbors[0] == neighborInternalVertexId) {
+        return 0;
+    }
+
+    if (neighbors[1] == neighborInternalVertexId) {
+        return 1;
+    }
+
+    throw std::invalid_argument("Vertex is not an external-face neighbor.");
+}
+
+void BmPartialEmbedding::setExternalFaceNeighbors(int internalVertexId, int firstNeighborId,
+                                                  int secondNeighborId) {
+    validateInternalVertex(internalVertexId);
+
+    if (firstNeighborId != -1) {
+        validateInternalVertex(firstNeighborId);
+    }
+
+    if (secondNeighborId != -1) {
+        validateInternalVertex(secondNeighborId);
+    }
+
+    internalVertices_[internalVertexId].externalFaceNeighbors = {firstNeighborId, secondNeighborId};
+}
+
+void BmPartialEmbedding::setExternalFaceNeighbor(int internalVertexId, int side,
+                                                 int neighborInternalVertexId) {
+    validateInternalVertex(internalVertexId);
+    validateInternalVertex(neighborInternalVertexId);
+
+    if (side < 0 || side > 1) {
+        throw std::out_of_range("External face side must be 0 or 1.");
+    }
+
+    internalVertices_[internalVertexId].externalFaceNeighbors[side] = neighborInternalVertexId;
+}
+
+void BmPartialEmbedding::shortcutExternalFacePath(int rootInternalVertexId, int rootSide,
+                                                  int stoppingInternalVertexId,
+                                                  int stoppingIncomingLink) {
+    validateInternalVertex(rootInternalVertexId);
+    validateInternalVertex(stoppingInternalVertexId);
+
+    if (rootSide < 0 || rootSide > 1) {
+        throw std::out_of_range("Root side must be 0 or 1.");
+    }
+
+    if (stoppingIncomingLink < 0 || stoppingIncomingLink > 1) {
+        throw std::out_of_range("Stopping incoming link must be 0 or 1.");
+    }
+
+    int targetVertex = stoppingInternalVertexId;
+
+    int targetIncomingLink = stoppingIncomingLink;
+
+    // Preserve at least three vertices on the external face.
+    // If the opposite root side already points to the stopping
+    // vertex, move the shortcut endpoint back by one vertex.
+    if (externalFaceNeighbor(rootInternalVertexId, 1 - rootSide) == targetVertex) {
+        const int oldTarget = targetVertex;
+
+        targetVertex = externalFaceNeighbor(targetVertex, targetIncomingLink);
+
+        targetIncomingLink = externalFaceNeighbor(targetVertex, 0) == oldTarget ? 1 : 0;
+    }
+
+    setExternalFaceNeighbor(rootInternalVertexId, rootSide, targetVertex);
+
+    setExternalFaceNeighbor(targetVertex, targetIncomingLink, rootInternalVertexId);
 }
 
 } // namespace bm

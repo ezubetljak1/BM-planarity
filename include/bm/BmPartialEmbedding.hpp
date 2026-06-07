@@ -24,6 +24,11 @@ struct BmInternalVertex {
 
     // Representative node of the circular adjacency list
     int firstIncidentHalfEdge = -1;
+
+    // external-face traversal links
+    // these are separate from adjacency anchors,
+    // allowing constant-time root-to-stopping-vertex shortcuts without fake edges
+    std::array<int, 2> externalFaceNeighbors = {-1, -1};
 };
 
 struct BmEmbeddedEdge {
@@ -131,6 +136,17 @@ public:
     int addExternalFaceEdge(int firstInternalVertexId, int firstLinkIndex,
                             int secondInternalVertexId, int secondLinkIndex, int originalEdgeId,
                             bool shortCircuit);
+
+    int externalFaceNeighbor(int internalVertexId, int side) const;
+
+    int externalFaceNeighborLinkIndex(int internalVertexId, int neighborInternalVertexId) const;
+
+    void setExternalFaceNeighbors(int internalVertexId, int firstNeighborId, int secondNeighborId);
+
+    void setExternalFaceNeighbor(int internalVertexId, int side, int neighborInternalVertexId);
+
+    void shortcutExternalFacePath(int rootInternalVertexId, int rootSide,
+                                  int stoppingInternalVertexId, int stoppingIncomingLink);
 
 private:
     std::vector<BmInternalVertex> internalVertices_;

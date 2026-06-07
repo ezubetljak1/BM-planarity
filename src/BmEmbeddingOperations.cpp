@@ -49,6 +49,24 @@ void BmEmbeddingOperations::mergeTopBiconnectedComponent(BmEmbeddingState& state
 
     int rootOutgoingLink = frame.rootOutgoingLink;
 
+    const int externalFaceVertex =
+        embedding.externalFaceNeighbor(sourceInternalVertexId, 1 - rootOutgoingLink);
+
+    embedding.setExternalFaceNeighbor(targetInternalVertexId, frame.cutVertexIncomingLink,
+                                      externalFaceVertex);
+
+    if (embedding.externalFaceNeighbor(externalFaceVertex, 0) ==
+        embedding.externalFaceNeighbor(externalFaceVertex, 1)) {
+        embedding.setExternalFaceNeighbor(externalFaceVertex, rootOutgoingLink,
+                                          targetInternalVertexId);
+    } else {
+        const int externalFaceLink =
+            embedding.externalFaceNeighbor(externalFaceVertex, 0) == sourceInternalVertexId ? 0 : 1;
+
+        embedding.setExternalFaceNeighbor(externalFaceVertex, externalFaceLink,
+                                          targetInternalVertexId);
+    }
+
     if (frame.cutVertexIncomingLink == rootOutgoingLink) {
         embedding.reverseAdjacencyOrientation(sourceInternalVertexId);
 
@@ -146,9 +164,10 @@ int BmEmbeddingOperations::embedShortCircuitEdge(BmEmbeddingState& state, int ro
 
     const int stoppingInternalVertexId = embedding.originalInternalVertex(stoppingVertex);
 
-    return embedding.addExternalFaceEdge(root.internalRootVertexId, rootOutgoingLink,
-                                         stoppingInternalVertexId, stoppingVertexIncomingLink, -1,
-                                         true);
+    embedding.shortcutExternalFacePath(root.internalRootVertexId, rootOutgoingLink,
+                                       stoppingInternalVertexId, stoppingVertexIncomingLink);
+
+    return -1;
 }
 
 } // namespace bm
