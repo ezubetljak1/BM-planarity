@@ -74,7 +74,6 @@ public:
     const BmBicompRoot& bicompRoot(int rootId) const;
     BmBicompRoot& bicompRoot(int rootId);
 
-
     int rootForChild(int childVertex) const;
     const std::vector<int>& childRoots(int vertex) const;
 
@@ -109,6 +108,16 @@ public:
 
     void removeExpectedFirstPertinentRoot(int vertex, int expectedRootId);
 
+    bool isOriginalEdgeEmbedded(int originalEdgeId) const;
+
+    int embeddedEdgeIdForOriginalEdge(int originalEdgeId) const;
+
+    void registerEmbeddedOriginalEdge(int originalEdgeId, int embeddedEdgeId);
+
+    void markBackedgeFlag(int vertex, int currentVertex, int originalEdgeId);
+
+    int pendingBackedgeOriginalEdgeId(int vertex, int currentVertex) const;
+
 private:
     const Graph* graph_ = nullptr;
     const DfsInfo* dfsInfo_ = nullptr;
@@ -130,6 +139,9 @@ private:
 
     void ensureInternalVisitedCapacity();
     void validateInternalVertex(int internalVertexId) const;
+
+    std::vector<int> embeddedEdgeIdByOriginalEdge_;
+    std::vector<int> pendingBackedgeOriginalEdgeId_;
 };
 
 } // namespace bm

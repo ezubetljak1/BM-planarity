@@ -111,11 +111,13 @@ public:
 
     void linkExternalFaceHalfEdges(int fromHalfEdgeId, int toHalfEdgeId);
 
-    int addEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId, int originalEdgeId, bool shortCircuit);
+    int addEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId, int originalEdgeId,
+                        bool shortCircuit);
     void insertHalfEdgeIntoAdjacency(int internalVertexId, int halfEdgeId);
     void redirectHalfEdgeEndpoint(int halfEdgeId, int newInternalVertexId);
     void redirectAdjacencyToVertex(int sourceInternalVertexId, int targetInternalVertexId);
-    void spliceAdjacencyLists(int targetInternalVertexId, int sourceInternalVertexId, int targetLinkIndex, int sourceLinkIndex);
+    void spliceAdjacencyLists(int targetInternalVertexId, int sourceInternalVertexId,
+                              int targetLinkIndex, int sourceLinkIndex);
     void swapExternalFaceLinks(int internalVertexId);
     void reverseAdjacencyOrientation(int internalVertexId);
     void setEmbeddedEdgeSign(int embeddedEdgeId, int sign);
@@ -126,7 +128,9 @@ public:
     int nextAroundVertex(int halfEdgeId) const;
     int previousAroundVertex(int halfEdgeId) const;
 
-    
+    int addExternalFaceEdge(int firstInternalVertexId, int firstLinkIndex,
+                            int secondInternalVertexId, int secondLinkIndex, int originalEdgeId,
+                            bool shortCircuit);
 
 private:
     std::vector<BmInternalVertex> internalVertices_;
@@ -140,6 +144,15 @@ private:
     void validateInternalVertex(int internalVertexId) const;
     void validateEmbeddedEdge(int embeddedEdgeId) const;
     void validateHalfEdge(int halfEdgeId) const;
+
+    int createDetachedEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId,
+                                   int originalEdgeId, bool shortCircuit);
+
+    void insertHalfEdgeAtExternalFaceSide(int internalVertexId, int halfEdgeId, int linkIndex);
+
+    int adjacencyLink(int halfEdgeId, int linkIndex) const;
+
+    void setAdjacencyLink(int halfEdgeId, int linkIndex, int neighborHalfEdgeId);
 };
 
 } // namespace bm

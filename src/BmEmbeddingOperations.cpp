@@ -8,21 +8,24 @@ namespace bm {
 namespace {
 
 void validateLinkIndex(int linkIndex, const char* fieldName) {
-    if (linkIndex < 0 || linkIndex > 1)
+    if (linkIndex < 0 || linkIndex > 1) {
         throw std::out_of_range(std::string(fieldName) + " must be 0 or 1.");
+    }
 }
 
 } // namespace
 
 void BmEmbeddingOperations::mergeTopBiconnectedComponent(BmEmbeddingState& state,
                                                          std::vector<BmMergeFrame>& mergeStack) {
-    if (mergeStack.empty())
+    if (mergeStack.empty()) {
         throw std::logic_error("Cannot merge from an empty stack.");
+    }
 
     const BmMergeFrame frame = mergeStack.back();
+
     mergeStack.pop_back();
 
-    (void) state.vertexState(frame.cutVertex); 
+    (void)state.vertexState(frame.cutVertex);
 
     validateLinkIndex(frame.cutVertexIncomingLink, "Cut-vertex incoming link");
 
@@ -30,11 +33,13 @@ void BmEmbeddingOperations::mergeTopBiconnectedComponent(BmEmbeddingState& state
 
     BmBicompRoot& root = state.bicompRoot(frame.rootId);
 
-    if (!root.active)
-        throw std::logic_error("Cannot merge an inactive bicomp root.");
+    if (!root.active) {
+        throw std::logic_error("Cannot merge inactive bicomp root.");
+    }
 
-    if (root.parentVertex != frame.cutVertex)
-        throw std::logic_error("Merge frame cut vertex does not match bicomp root parent.");
+    if (root.parentVertex != frame.cutVertex) {
+        throw std::logic_error("Merge-frame cut vertex does not match root parent.");
+    }
 
     BmPartialEmbedding& embedding = state.partialEmbedding();
 
@@ -44,21 +49,16 @@ void BmEmbeddingOperations::mergeTopBiconnectedComponent(BmEmbeddingState& state
 
     int rootOutgoingLink = frame.rootOutgoingLink;
 
-    // Appendix B:
-    // if r_in == r^c_out, invert orientation of r^c
-    // and set sign of root edge to -1.
     if (frame.cutVertexIncomingLink == rootOutgoingLink) {
         embedding.reverseAdjacencyOrientation(sourceInternalVertexId);
 
-        root.rootEdgeSign = -1;
-
         embedding.setEmbeddedEdgeSign(root.embeddedTreeEdgeId, -1);
+
+        root.rootEdgeSign = -1;
 
         rootOutgoingLink = 1 - rootOutgoingLink;
     }
 
-    // For each outgoing half-edge stored at virtual root r^c:
-    // update it so it is now incident to real cut vertex r.
     embedding.redirectAdjacencyToVertex(sourceInternalVertexId, targetInternalVertexId);
 
     state.removeExpectedFirstPertinentRoot(frame.cutVertex, root.id);
@@ -73,8 +73,82 @@ void BmEmbeddingOperations::mergeTopBiconnectedComponent(BmEmbeddingState& state
 
 void BmEmbeddingOperations::mergeAllBiconnectedComponents(BmEmbeddingState& state,
                                                           std::vector<BmMergeFrame>& mergeStack) {
-    while (!mergeStack.empty())
+    while (!mergeStack.empty()) {
         mergeTopBiconnectedComponent(state, mergeStack);
+    }
+}
+
+BmExternalFacePosition BmEmbeddingOperations::getActiveSuccessorOnExternalFace(
+    const BmEmbeddingState& state, BmExternalFacePosition start, int currentVertex) {
+    BmExternalFaceTraversal traversal(state.partialEmbedding());
+
+    BmExternalFacePosition current = traversal.successor(start);
+
+    const int maxSteps = state.partialEmbedding().halfEdgeCount() + 1;
+
+    for (int step = 0; step < maxSteps; ++step) {
+        if (current.internalVertexId == start.internalVertexId) {
+            return current;
+        }
+
+        if (state.isInternalBicompRootVertex(current.internalVertexId)) {
+            return current;
+        }
+
+        const int vertex = state.originalVertexForInternalVertex(current.internalVertexId);
+
+        if (!state.isInactive(vertex, currentVertex)) {
+            return current;
+        }
+
+        current = traversal.successor(current);
+    }
+
+    throw std::logic_error("External-face traversal did not return to its start vertex.");
+}
+
+int BmEmbeddingOperations::embedBackEdge(BmEmbeddingState& state, int rootId, int rootOutgoingLink,
+                                         int descendantVertex, int descendantIncomingLink,
+                                         int currentVertex) {
+    validateLinkIndex(rootOutgoingLink, "Root outgoing link");
+
+    validateLinkIndex(descendantIncomingLink, "Descendant incoming link");
+
+    BmBicompRoot& root = state.bicompRoot(rootId);
+
+    const int originalEdgeId = state.pendingBackedgeOriginalEdgeId(descendantVertex, currentVertex);
+
+    BmPartialEmbedding& embedding = state.partialEmbedding();
+
+    const int descendantInternalVertexId = embedding.originalInternalVertex(descendantVertex);
+
+    const int embeddedEdgeId = embedding.addExternalFaceEdge(
+        root.internalRootVertexId, rootOutgoingLink, descendantInternalVertexId,
+        descendantIncomingLink, originalEdgeId, false);
+
+    state.registerEmbeddedOriginalEdge(originalEdgeId, embeddedEdgeId);
+
+    state.clearBackedgeFlag(descendantVertex);
+
+    return embeddedEdgeId;
+}
+
+int BmEmbeddingOperations::embedShortCircuitEdge(BmEmbeddingState& state, int rootId,
+                                                 int rootOutgoingLink, int stoppingVertex,
+                                                 int stoppingVertexIncomingLink) {
+    validateLinkIndex(rootOutgoingLink, "Root outgoing link");
+
+    validateLinkIndex(stoppingVertexIncomingLink, "Stopping-vertex incoming link");
+
+    BmBicompRoot& root = state.bicompRoot(rootId);
+
+    BmPartialEmbedding& embedding = state.partialEmbedding();
+
+    const int stoppingInternalVertexId = embedding.originalInternalVertex(stoppingVertex);
+
+    return embedding.addExternalFaceEdge(root.internalRootVertexId, rootOutgoingLink,
+                                         stoppingInternalVertexId, stoppingVertexIncomingLink, -1,
+                                         true);
 }
 
 } // namespace bm
