@@ -60,6 +60,7 @@ public:
     const BmVertexState& vertexState(int vertex) const;
 
     const BmPartialEmbedding& partialEmbedding() const;
+    BmPartialEmbedding& partialEmbedding();
 
     bool isExternallyActive(int vertex, int currentVertex) const;
 
@@ -71,6 +72,8 @@ public:
 
     int bicompRootCount() const;
     const BmBicompRoot& bicompRoot(int rootId) const;
+    BmBicompRoot& bicompRoot(int rootId);
+
 
     int rootForChild(int childVertex) const;
     const std::vector<int>& childRoots(int vertex) const;
@@ -101,6 +104,10 @@ public:
     void markInternalVertexVisitedInStep(int internalVertexId, int currentVertex);
     void validateVertex(int vertex) const;
     bool isBackedgeEndpointForCurrentVertex(int vertex, int currentVertex) const;
+
+    void deactivateBicompRoot(int rootId);
+
+    void removeExpectedFirstPertinentRoot(int vertex, int expectedRootId);
 
 private:
     const Graph* graph_ = nullptr;

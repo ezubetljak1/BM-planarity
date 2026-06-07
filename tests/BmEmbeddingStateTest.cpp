@@ -183,17 +183,17 @@ BM_TEST(BmEmbeddingStateMarksBackedgeFlag) {
 
     BmEmbeddingState state(graph, dfsInfo);
 
-    BM_ASSERT(!state.hasBackedgeFlag(1));
+    BM_ASSERT(!state.hasBackedgeFlag(1, 0));
 
-    state.markBackedgeFlag(1);
+    state.markBackedgeFlag(1, 0);
 
-    BM_ASSERT(state.hasBackedgeFlag(1));
-    BM_ASSERT(state.isPertinent(1));
+    BM_ASSERT(state.hasBackedgeFlag(1, 0));
+    BM_ASSERT(state.isPertinent(1, 0));
 
     state.clearBackedgeFlag(1);
 
-    BM_ASSERT(!state.hasBackedgeFlag(1));
-    BM_ASSERT(!state.isPertinent(1));
+    BM_ASSERT(!state.hasBackedgeFlag(1, 0));
+    BM_ASSERT(!state.isPertinent(1, 0));
 }
 
 BM_TEST(BmEmbeddingStateMarksVisitedInStepByCurrentDfi) {
@@ -230,7 +230,7 @@ BM_TEST(BmEmbeddingStateAddsPertinentRoot) {
 
     BM_ASSERT(state.hasPertinentRoots(0));
     BM_ASSERT(state.firstPertinentRoot(0) == rootId);
-    BM_ASSERT(state.isPertinent(0));
+    BM_ASSERT(state.isPertinent(0, 0));
 
     state.removeFirstPertinentRoot(0);
 

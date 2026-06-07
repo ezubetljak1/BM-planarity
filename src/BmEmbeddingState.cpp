@@ -36,6 +36,10 @@ const BmPartialEmbedding& BmEmbeddingState::partialEmbedding() const {
     return partialEmbedding_;
 }
 
+BmPartialEmbedding& BmEmbeddingState::partialEmbedding() {
+    return partialEmbedding_;
+}
+
 bool BmEmbeddingState::isExternallyActive(int vertex, int currentVertex) const {
     validateVertex(vertex);
     validateVertex(currentVertex);
@@ -121,6 +125,36 @@ const BmBicompRoot& BmEmbeddingState::bicompRoot(int rootId) const {
         throw std::out_of_range("Invalid bicomp root id.");
 
     return bicompRoots_[rootId];
+}
+
+BmBicompRoot& BmEmbeddingState::bicompRoot(int rootId) {
+    if (rootId < 0 || rootId >= bicompRoots_.size())
+        throw std::out_of_range("Invalid bicomp root id.");
+
+    return bicompRoots_[rootId];
+}
+
+void BmEmbeddingState::deactivateBicompRoot(int rootId) {
+    BmBicompRoot& root = bicompRoot(rootId);
+
+    if (!root.active)
+        throw std::logic_error("Bicomp root is already inactive.");
+
+    root.active = false;
+}
+
+void BmEmbeddingState::removeExpectedFirstPertinentRoot(int vertex, int expectedRootId) {
+    validateVertex(vertex);
+
+    auto& roots = vertexStates_[vertex].pertinentRoots;
+
+    if (roots.empty())
+        throw std::logic_error("Vertex has no pertinent roots.");
+
+    if (roots.front() != expectedRootId)
+        throw std::logic_error("Unexpected pertinent root at front of list.");
+        
+    roots.pop_front();
 }
 
 int BmEmbeddingState::rootForChild(int childVertex) const {

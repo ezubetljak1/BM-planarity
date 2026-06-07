@@ -21,6 +21,9 @@ struct BmInternalVertex {
     // the two external-face links incident to this internal vertex
     // for a single tree-edge bicomp both sides may initially refer to the same half-edge
     std::array<int, 2> externalFaceHalfEdges = {-1, -1};
+
+    // Representative node of the circular adjacency list
+    int firstIncidentHalfEdge = -1;
 };
 
 struct BmEmbeddedEdge {
@@ -33,6 +36,10 @@ struct BmEmbeddedEdge {
     int halfEdgeB = -1;
 
     bool shortCircuit = false;
+
+    // Used for lazy flip recovery
+    int sign = 1;
+    bool active = true;
 };
 
 struct BmHalfEdge {
@@ -47,6 +54,10 @@ struct BmHalfEdge {
     // circular external-face traversal links
     int nextOnExternalFace = -1;
     int previousOnExternalFace = -1;
+
+    // circular adjacency-list links around from
+    int nextAroundVertex = -1;
+    int previousAroundVertex = -1;
 };
 
 struct BmTreeBicompEmbedding {
@@ -70,8 +81,13 @@ public:
     int originalInternalVertex(int originalVertex) const;
 
     const BmInternalVertex& internalVertex(int internalVertexId) const;
+    BmInternalVertex& internalVertex(int internalVertexId);
+
     const BmEmbeddedEdge& embeddedEdge(int embeddedEdgeId) const;
+    BmEmbeddedEdge& embeddedEdge(int embeddedEdgeId);
+
     const BmHalfEdge& halfEdge(int halfEdge) const;
+    BmHalfEdge& halfEdge(int halfEdge);
 
     BmTreeBicompEmbedding createTreeEdgeBicomp(int bicompRootId, int parentVertex, int childVertex,
                                                int originalTreeEdgeId);
@@ -94,6 +110,23 @@ public:
     void setExternalFaceHalfEdges(int internalVertexId, int firstHalfEdgeId, int secondHalfEdgeId);
 
     void linkExternalFaceHalfEdges(int fromHalfEdgeId, int toHalfEdgeId);
+
+    int addEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId, int originalEdgeId, bool shortCircuit);
+    void insertHalfEdgeIntoAdjacency(int internalVertexId, int halfEdgeId);
+    void redirectHalfEdgeEndpoint(int halfEdgeId, int newInternalVertexId);
+    void redirectAdjacencyToVertex(int sourceInternalVertexId, int targetInternalVertexId);
+    void spliceAdjacencyLists(int targetInternalVertexId, int sourceInternalVertexId, int targetLinkIndex, int sourceLinkIndex);
+    void swapExternalFaceLinks(int internalVertexId);
+    void reverseAdjacencyOrientation(int internalVertexId);
+    void setEmbeddedEdgeSign(int embeddedEdgeId, int sign);
+
+    bool adjacencyEmpty(int internalVertexId) const;
+
+    int firstIncidentHalfEdge(int internalVertexId) const;
+    int nextAroundVertex(int halfEdgeId) const;
+    int previousAroundVertex(int halfEdgeId) const;
+
+    
 
 private:
     std::vector<BmInternalVertex> internalVertices_;

@@ -41,8 +41,8 @@ BM_TEST(BmWalkupMarksBackedgeEndpointAsPertinent) {
     BmWalkup walkup;
     walkup.run(state, 0, 2);
 
-    BM_ASSERT(state.hasBackedgeFlag(2));
-    BM_ASSERT(state.isPertinent(2));
+    BM_ASSERT(state.hasBackedgeFlag(2, 0));
+    BM_ASSERT(state.isPertinent(2, 0));
 }
 
 BM_TEST(BmWalkupAddsIntermediateRootToPertinentRoots) {
@@ -87,7 +87,7 @@ BM_TEST(BmWalkupAddsMultipleRootsAlongTreePath) {
     BmWalkup walkup;
     walkup.run(state, 0, 3);
 
-    BM_ASSERT(state.hasBackedgeFlag(3));
+    BM_ASSERT(state.hasBackedgeFlag(3, 0));
 
     BM_ASSERT(state.hasPertinentRoots(2));
     BM_ASSERT(state.firstPertinentRoot(2) == rootForChild3);
@@ -124,8 +124,8 @@ BM_TEST(BmWalkupVisitedStopsDuplicatePertinentRootInsertion) {
         state.vertexState(1).pertinentRoots.size()
     );
 
-    BM_ASSERT(state.hasBackedgeFlag(3));
-    BM_ASSERT(state.hasBackedgeFlag(2));
+    BM_ASSERT(state.hasBackedgeFlag(3, 0));
+    BM_ASSERT(state.hasBackedgeFlag(2, 0));
 
     BM_ASSERT(sizeBefore == 1);
     BM_ASSERT(sizeAfter == sizeBefore);
@@ -148,7 +148,7 @@ BM_TEST(BmWalkupWorksWhenCurrentVertexIsNotDfsRoot) {
     BmWalkup walkup;
     walkup.run(state, 1, 3);
 
-    BM_ASSERT(state.hasBackedgeFlag(3));
+    BM_ASSERT(state.hasBackedgeFlag(3, 1));
 
     BM_ASSERT(state.hasPertinentRoots(2));
     BM_ASSERT(state.firstPertinentRoot(2) == rootForChild3);
@@ -296,8 +296,8 @@ BM_TEST(BmWalkupHandlesBackedgesInDifferentBranches) {
     walkup.run(state, 1, 4);
     walkup.run(state, 1, 5);
 
-    BM_ASSERT(state.hasBackedgeFlag(4));
-    BM_ASSERT(state.hasBackedgeFlag(5));
+    BM_ASSERT(state.hasBackedgeFlag(4, 1));
+    BM_ASSERT(state.hasBackedgeFlag(5, 1));
 
     BM_ASSERT(state.hasPertinentRoots(2));
     BM_ASSERT(state.firstPertinentRoot(2) == rootForChild4);
