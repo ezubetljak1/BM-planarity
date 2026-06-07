@@ -130,11 +130,7 @@ BmWalkdownResult BmWalkdown::run(BmEmbeddingState& state, int currentVertex, int
             }
 
             // The vertex is externally active and non-pertinent:
-            // it is a stopping vertex.
-            if (state.dfsInfo().lowpointDfi[child] < currentDfi && mergeStack.empty()) {
-                BmEmbeddingOperations::embedShortCircuitEdge(state, rootId, rootOutgoingLink,
-                                                             vertex, position.linkIndex);
-            }
+            // it is a stopping vertex. Walkdown must stop here
 
             break;
         }
