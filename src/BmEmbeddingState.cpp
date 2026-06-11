@@ -8,7 +8,9 @@ BmEmbeddingState::BmEmbeddingState(const Graph& graph, const DfsInfo& dfsInfo)
     : graph_(&graph), dfsInfo_(&dfsInfo), vertexStates_(graph.vertexCount()),
       separatedDfsChildLists_(dfsInfo), partialEmbedding_(graph.vertexCount()),
       rootForChild_(graph.vertexCount(), -1), childRoots_(graph.vertexCount()),
-      internalVertexVisitedInStep_(graph.vertexCount(), -1) {
+      internalVertexVisitedInStep_(graph.vertexCount(), -1),
+      embeddedEdgeIdByOriginalEdge_(graph.edgeCount(), -1),
+      pendingBackedgeOriginalEdgeId_(graph.vertexCount(), -1) {
 
     for (int v = 0; v < graph.vertexCount(); ++v)
         vertexStates_[v].vertex = v;
@@ -101,6 +103,8 @@ int BmEmbeddingState::createTreeEdgeBicomp(int parentVertex, int childVertex) {
     BmTreeBicompEmbedding treeEmbedding =
         partialEmbedding_.createTreeEdgeBicomp(root.id, parentVertex, childVertex, treeEdgeId);
 
+    registerEmbeddedOriginalEdge(treeEdgeId, treeEmbedding.embeddedEdgeId);
+
     ensureInternalVisitedCapacity();
     root.internalRootVertexId = treeEmbedding.rootInternalVertexId;
     root.internalChildVertexId = treeEmbedding.childInternalVertexId;
@@ -153,7 +157,7 @@ void BmEmbeddingState::removeExpectedFirstPertinentRoot(int vertex, int expected
 
     if (roots.front() != expectedRootId)
         throw std::logic_error("Unexpected pertinent root at front of list.");
-        
+
     roots.pop_front();
 }
 
@@ -174,16 +178,10 @@ bool BmEmbeddingState::hasBackedgeFlag(int vertex, int currentVertex) const {
     return vertexStates_[vertex].backedgeFlagDfi == dfsInfo_->dfsIndex[currentVertex];
 }
 
-void BmEmbeddingState::markBackedgeFlag(int vertex, int currentVertex) {
-    validateVertex(vertex);
-    validateVertex(currentVertex);
-
-    vertexStates_[vertex].backedgeFlagDfi = dfsInfo_->dfsIndex[currentVertex];
-}
-
 void BmEmbeddingState::clearBackedgeFlag(int vertex) {
     validateVertex(vertex);
     vertexStates_[vertex].backedgeFlagDfi = -1;
+    pendingBackedgeOriginalEdgeId_[vertex] = -1;
 }
 
 bool BmEmbeddingState::isVisitedInStep(int vertex, int currentVertex) const {
@@ -321,7 +319,7 @@ void BmEmbeddingState::markInternalVertexVisitedInStep(int internalVertexId, int
 void BmEmbeddingState::ensureInternalVisitedCapacity() {
     const int neededSize = partialEmbedding_.internalVertexCount();
 
-    if (static_cast<int>(internalVertexVisitedInStep_.size()) < neededSize) {
+    if (internalVertexVisitedInStep_.size() < neededSize) {
         internalVertexVisitedInStep_.resize(neededSize, -1);
     }
 }
@@ -332,9 +330,70 @@ void BmEmbeddingState::validateInternalVertex(int internalVertexId) const {
     }
 }
 
-bool BmEmbeddingState::isBackedgeEndpointForCurrentVertex(int vertex, int currentVertex) const{
+bool BmEmbeddingState::isBackedgeEndpointForCurrentVertex(int vertex, int currentVertex) const {
     return hasBackedgeFlag(vertex, currentVertex);
 }
 
+bool BmEmbeddingState::isOriginalEdgeEmbedded(int originalEdgeId) const {
+    if (originalEdgeId < 0 || originalEdgeId >= embeddedEdgeIdByOriginalEdge_.size())
+        throw std::out_of_range("Invalid original edge id.");
+
+    return embeddedEdgeIdByOriginalEdge_[originalEdgeId] != -1;
+}
+
+int BmEmbeddingState::embeddedEdgeIdForOriginalEdge(int originalEdgeId) const {
+    if (originalEdgeId < 0 || originalEdgeId >= embeddedEdgeIdByOriginalEdge_.size())
+        throw std::out_of_range("Invalid original edge id.");
+
+    return embeddedEdgeIdByOriginalEdge_[originalEdgeId];
+}
+
+void BmEmbeddingState::registerEmbeddedOriginalEdge(int originalEdgeId, int embeddedEdgeId) {
+    if (originalEdgeId < 0 || originalEdgeId >= embeddedEdgeIdByOriginalEdge_.size())
+        throw std::out_of_range("Invalid original edge id.");
+
+    if (embeddedEdgeId < 0 || embeddedEdgeId >= partialEmbedding_.embeddedEdgeCount())
+        throw std::out_of_range("Invalid embedded edge id.");
+
+    int& stored = embeddedEdgeIdByOriginalEdge_[originalEdgeId];
+
+    if (stored != -1 && stored != embeddedEdgeId)
+        throw std::logic_error("Original edge is already registered as embedded.");
+
+    stored = embeddedEdgeId;
+}
+
+void BmEmbeddingState::markBackedgeFlag(int vertex, int currentVertex) {
+    markBackedgeFlag(vertex, currentVertex, -1);
+}
+
+void BmEmbeddingState::markBackedgeFlag(int vertex, int currentVertex, int originalEdgeId) {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    if (originalEdgeId != -1) {
+        (void)graph_->edge(originalEdgeId);
+    }
+
+    vertexStates_[vertex].backedgeFlagDfi = dfsInfo_->dfsIndex[currentVertex];
+
+    pendingBackedgeOriginalEdgeId_[vertex] = originalEdgeId;
+}
+
+int BmEmbeddingState::pendingBackedgeOriginalEdgeId(int vertex, int currentVertex) const {
+    validateVertex(vertex);
+    validateVertex(currentVertex);
+
+    if (!hasBackedgeFlag(vertex, currentVertex))
+        throw std::logic_error("Vertex is not a pending back-edge endpoint for this step.");
+
+    const int edgeId = pendingBackedgeOriginalEdgeId_[vertex];
+
+    if (edgeId == -1) {
+        throw std::logic_error("Pending back-edge endpoint has no original edge id.");
+    }
+
+    return edgeId;
+}
 
 } // namespace bm

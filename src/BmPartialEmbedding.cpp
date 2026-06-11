@@ -1,6 +1,7 @@
 #include "bm/BmPartialEmbedding.hpp"
 
 #include <stdexcept>
+#include <string>
 
 namespace bm {
 
@@ -105,6 +106,10 @@ BmTreeBicompEmbedding BmPartialEmbedding::createTreeEdgeBicomp(int bicompRootId,
     setExternalFaceHalfEdges(rootInternalVertexId, rootToChildHalfEdgeId, rootToChildHalfEdgeId);
 
     setExternalFaceHalfEdges(childInternalVertexId, childToRootHalfEdgeId, childToRootHalfEdgeId);
+
+    setExternalFaceNeighbors(rootInternalVertexId, childInternalVertexId, childInternalVertexId);
+
+    setExternalFaceNeighbors(childInternalVertexId, rootInternalVertexId, rootInternalVertexId);
 
     BmTreeBicompEmbedding result;
     result.rootInternalVertexId = rootInternalVertexId;
@@ -269,50 +274,14 @@ void BmPartialEmbedding::validateHalfEdge(int halfEdgeId) const {
 
 int BmPartialEmbedding::addEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId,
                                         int originalEdgeId, bool shortCircuit) {
-    validateInternalVertex(fromInternalVertexId);
-    validateInternalVertex(toInternalVertexId);
+    const int embeddedEdgeId = createDetachedEmbeddedEdge(fromInternalVertexId, toInternalVertexId,
+                                                          originalEdgeId, shortCircuit);
 
-    if (shortCircuit && originalEdgeId != -1)
-        throw std::invalid_argument(
-            "Short-circuit edge must not reference an original graph edge.");
+    const BmEmbeddedEdge& edge = embeddedEdges_[embeddedEdgeId];
 
-    if (!shortCircuit && originalEdgeId < 0)
-        throw std::invalid_argument("Non-helper edge must reference an original graph edge.");
+    insertHalfEdgeIntoAdjacency(fromInternalVertexId, edge.halfEdgeA);
 
-    const int embeddedEdgeId = embeddedEdges_.size();
-    const int halfEdgeAId = halfEdges_.size();
-    const int halfEdgeBId = halfEdgeAId + 1;
-
-    BmEmbeddedEdge embeddedEdge;
-    embeddedEdge.id = embeddedEdgeId;
-    embeddedEdge.originalEdgeId = originalEdgeId;
-    embeddedEdge.halfEdgeA = halfEdgeAId;
-    embeddedEdge.halfEdgeB = halfEdgeBId;
-    embeddedEdge.shortCircuit = shortCircuit;
-    embeddedEdge.sign = 1;
-    embeddedEdge.active = true;
-
-    BmHalfEdge halfEdgeA;
-    halfEdgeA.id = halfEdgeAId;
-    halfEdgeA.embeddedEdgeId = embeddedEdgeId;
-    halfEdgeA.from = fromInternalVertexId;
-    halfEdgeA.to = toInternalVertexId;
-    halfEdgeA.twin = halfEdgeBId;
-
-    BmHalfEdge halfEdgeB;
-    halfEdgeB.id = halfEdgeBId;
-    halfEdgeB.embeddedEdgeId = embeddedEdgeId;
-    halfEdgeB.from = toInternalVertexId;
-    halfEdgeB.to = fromInternalVertexId;
-    halfEdgeB.twin = halfEdgeAId;
-
-    embeddedEdges_.push_back(embeddedEdge);
-
-    halfEdges_.push_back(halfEdgeA);
-    halfEdges_.push_back(halfEdgeB);
-
-    insertHalfEdgeIntoAdjacency(fromInternalVertexId, halfEdgeAId);
-    insertHalfEdgeIntoAdjacency(toInternalVertexId, halfEdgeBId);
+    insertHalfEdgeIntoAdjacency(toInternalVertexId, edge.halfEdgeB);
 
     return embeddedEdgeId;
 }
@@ -419,6 +388,7 @@ void BmPartialEmbedding::spliceAdjacencyLists(int targetInternalVertexId,
         throw std::out_of_range("Source link index must be 0 or 1.");
 
     BmInternalVertex& target = internalVertices_[targetInternalVertexId];
+
     BmInternalVertex& source = internalVertices_[sourceInternalVertexId];
 
     if (source.firstIncidentHalfEdge == -1)
@@ -426,41 +396,41 @@ void BmPartialEmbedding::spliceAdjacencyLists(int targetInternalVertexId,
 
     if (target.firstIncidentHalfEdge == -1) {
         target.firstIncidentHalfEdge = source.firstIncidentHalfEdge;
+
         target.externalFaceHalfEdges = source.externalFaceHalfEdges;
 
         source.firstIncidentHalfEdge = -1;
         source.externalFaceHalfEdges = {-1, -1};
+        source.externalFaceNeighbors = {-1, -1};
+
         return;
     }
 
     const int targetAnchor = target.externalFaceHalfEdges[targetLinkIndex];
+
     const int sourceAnchor = source.externalFaceHalfEdges[sourceLinkIndex];
 
     if (targetAnchor == -1 || sourceAnchor == -1)
-        throw std::logic_error(
-            "Cannot splice adjacency lists without external-face anchor half-edges.");
+        throw std::logic_error("Cannot splice adjacency lists without external-face anchors.");
 
-    validateHalfEdge(targetAnchor);
-    validateHalfEdge(sourceAnchor);
+    const int targetNeighbor = adjacencyLink(targetAnchor, targetLinkIndex);
 
-    const int targetNext = halfEdges_[targetAnchor].nextAroundVertex;
-    const int sourcePrevious = halfEdges_[sourceAnchor].previousAroundVertex;
+    const int sourceNeighbor = adjacencyLink(sourceAnchor, sourceLinkIndex);
 
-    // insert the full source circular list immediately after targetAncor
+    setAdjacencyLink(targetAnchor, targetLinkIndex, sourceAnchor);
 
-    halfEdges_[targetAnchor].nextAroundVertex = sourceAnchor;
-    halfEdges_[sourceAnchor].previousAroundVertex = targetAnchor;
+    setAdjacencyLink(sourceAnchor, sourceLinkIndex, targetAnchor);
 
-    halfEdges_[sourcePrevious].nextAroundVertex = targetNext;
-    halfEdges_[targetNext].previousAroundVertex = sourcePrevious;
+    setAdjacencyLink(targetNeighbor, 1 - targetLinkIndex, sourceNeighbor);
 
-    // Appendix B:
-    // link[r_in] in r <- link[1 xor r^c_out] from r^c
+    setAdjacencyLink(sourceNeighbor, 1 - sourceLinkIndex, targetNeighbor);
 
     target.externalFaceHalfEdges[targetLinkIndex] =
         source.externalFaceHalfEdges[1 - sourceLinkIndex];
+
     source.firstIncidentHalfEdge = -1;
     source.externalFaceHalfEdges = {-1, -1};
+    source.externalFaceNeighbors = {-1, -1};
 }
 
 void BmPartialEmbedding::swapExternalFaceLinks(int internalVertexId) {
@@ -468,6 +438,9 @@ void BmPartialEmbedding::swapExternalFaceLinks(int internalVertexId) {
 
     std::swap(internalVertices_[internalVertexId].externalFaceHalfEdges[0],
               internalVertices_[internalVertexId].externalFaceHalfEdges[1]);
+
+    std::swap(internalVertices_[internalVertexId].externalFaceNeighbors[0],
+              internalVertices_[internalVertexId].externalFaceNeighbors[1]);
 }
 
 void BmPartialEmbedding::reverseAdjacencyOrientation(int internalVertexId) {
@@ -501,6 +474,231 @@ void BmPartialEmbedding::setEmbeddedEdgeSign(int embeddedEdgeId, int sign) {
         throw std::invalid_argument("Embedded-edge sign must be +1 or -1.");
 
     embeddedEdges_[embeddedEdgeId].sign = sign;
+}
+
+int BmPartialEmbedding::createDetachedEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId,
+                                                   int originalEdgeId, bool shortCircuit) {
+    validateInternalVertex(fromInternalVertexId);
+    validateInternalVertex(toInternalVertexId);
+
+    if (shortCircuit && originalEdgeId != -1)
+        throw std::invalid_argument(
+            "Short-circuit edge must not reference an original graph edge.");
+
+    if (!shortCircuit && originalEdgeId < 0)
+        throw std::invalid_argument("Non-helper edge must reference an original graph edge.");
+
+    const int embeddedEdgeId = embeddedEdges_.size();
+    const int halfEdgeAId = halfEdges_.size();
+    const int halfEdgeBId = halfEdgeAId + 1;
+
+    BmEmbeddedEdge embeddedEdge;
+    embeddedEdge.id = embeddedEdgeId;
+    embeddedEdge.originalEdgeId = originalEdgeId;
+    embeddedEdge.halfEdgeA = halfEdgeAId;
+    embeddedEdge.halfEdgeB = halfEdgeBId;
+    embeddedEdge.shortCircuit = shortCircuit;
+    embeddedEdge.sign = 1;
+    embeddedEdge.active = true;
+
+    BmHalfEdge halfEdgeA;
+    halfEdgeA.id = halfEdgeAId;
+    halfEdgeA.embeddedEdgeId = embeddedEdgeId;
+    halfEdgeA.from = fromInternalVertexId;
+    halfEdgeA.to = toInternalVertexId;
+    halfEdgeA.twin = halfEdgeBId;
+
+    BmHalfEdge halfEdgeB;
+    halfEdgeB.id = halfEdgeBId;
+    halfEdgeB.embeddedEdgeId = embeddedEdgeId;
+    halfEdgeB.from = toInternalVertexId;
+    halfEdgeB.to = fromInternalVertexId;
+    halfEdgeB.twin = halfEdgeAId;
+
+    embeddedEdges_.push_back(embeddedEdge);
+    halfEdges_.push_back(halfEdgeA);
+    halfEdges_.push_back(halfEdgeB);
+
+    return embeddedEdgeId;
+}
+
+int BmPartialEmbedding::adjacencyLink(int halfEdgeId, int linkIndex) const {
+    validateHalfEdge(halfEdgeId);
+
+    if (linkIndex < 0 || linkIndex > 1)
+        throw std::out_of_range("Adjacency link index must be 0 or 1.");
+
+    if (linkIndex == 0)
+        return halfEdges_[halfEdgeId].previousAroundVertex;
+
+    return halfEdges_[halfEdgeId].nextAroundVertex;
+}
+
+void BmPartialEmbedding::setAdjacencyLink(int halfEdgeId, int linkIndex, int neighborHalfEdgeId) {
+    validateHalfEdge(halfEdgeId);
+    validateHalfEdge(neighborHalfEdgeId);
+
+    if (linkIndex < 0 || linkIndex > 1)
+        throw std::out_of_range("Adjacency link index must be 0 or 1.");
+
+    if (linkIndex == 0) {
+        halfEdges_[halfEdgeId].previousAroundVertex = neighborHalfEdgeId;
+    } else {
+        halfEdges_[halfEdgeId].nextAroundVertex = neighborHalfEdgeId;
+    }
+}
+
+void BmPartialEmbedding::insertHalfEdgeAtExternalFaceSide(int internalVertexId, int halfEdgeId,
+                                                          int linkIndex) {
+    validateInternalVertex(internalVertexId);
+    validateHalfEdge(halfEdgeId);
+
+    if (linkIndex < 0 || linkIndex > 1)
+        throw std::out_of_range("External-face link index must be 0 or 1.");
+
+    BmInternalVertex& vertex = internalVertices_[internalVertexId];
+    BmHalfEdge& inserted = halfEdges_[halfEdgeId];
+
+    if (inserted.from != internalVertexId)
+        throw std::logic_error("Half-edge source does not match adjacency-list vertex.");
+
+    if (inserted.nextAroundVertex != -1 || inserted.previousAroundVertex != -1)
+        throw std::logic_error("Half-edge is already linked into an adjacency list.");
+
+    if (vertex.firstIncidentHalfEdge == -1) {
+        inserted.nextAroundVertex = halfEdgeId;
+        inserted.previousAroundVertex = halfEdgeId;
+
+        vertex.firstIncidentHalfEdge = halfEdgeId;
+        vertex.externalFaceHalfEdges = {halfEdgeId, halfEdgeId};
+
+        return;
+    }
+
+    const int oldExternalHalfEdge = vertex.externalFaceHalfEdges[linkIndex];
+
+    if (oldExternalHalfEdge == -1)
+        throw std::logic_error("Existing adjacency list has no external-face anchor.");
+
+    const int neighbor = adjacencyLink(oldExternalHalfEdge, linkIndex);
+
+    setAdjacencyLink(oldExternalHalfEdge, linkIndex, halfEdgeId);
+
+    setAdjacencyLink(halfEdgeId, 1 - linkIndex, oldExternalHalfEdge);
+
+    setAdjacencyLink(halfEdgeId, linkIndex, neighbor);
+
+    setAdjacencyLink(neighbor, 1 - linkIndex, halfEdgeId);
+
+    vertex.externalFaceHalfEdges[linkIndex] = halfEdgeId;
+}
+
+int BmPartialEmbedding::addExternalFaceEdge(int firstInternalVertexId, int firstLinkIndex,
+                                            int secondInternalVertexId, int secondLinkIndex,
+                                            int originalEdgeId, bool shortCircuit) {
+    const int embeddedEdgeId = createDetachedEmbeddedEdge(
+        firstInternalVertexId, secondInternalVertexId, originalEdgeId, shortCircuit);
+
+    const BmEmbeddedEdge& edge = embeddedEdges_[embeddedEdgeId];
+
+    insertHalfEdgeAtExternalFaceSide(firstInternalVertexId, edge.halfEdgeA, firstLinkIndex);
+
+    insertHalfEdgeAtExternalFaceSide(secondInternalVertexId, edge.halfEdgeB, secondLinkIndex);
+
+    setExternalFaceNeighbor(firstInternalVertexId, firstLinkIndex, secondInternalVertexId);
+
+    setExternalFaceNeighbor(secondInternalVertexId, secondLinkIndex, firstInternalVertexId);
+
+    return embeddedEdgeId;
+}
+
+int BmPartialEmbedding::externalFaceNeighbor(int internalVertexId, int side) const {
+    validateInternalVertex(internalVertexId);
+
+    if (side < 0 || side > 1) {
+        throw std::out_of_range("External face side must be 0 or 1.");
+    }
+
+    return internalVertices_[internalVertexId].externalFaceNeighbors[side];
+}
+
+int BmPartialEmbedding::externalFaceNeighborLinkIndex(int internalVertexId,
+                                                      int neighborInternalVertexId) const {
+    validateInternalVertex(internalVertexId);
+    validateInternalVertex(neighborInternalVertexId);
+
+    const auto& neighbors = internalVertices_[internalVertexId].externalFaceNeighbors;
+
+    if (neighbors[0] == neighborInternalVertexId) {
+        return 0;
+    }
+
+    if (neighbors[1] == neighborInternalVertexId) {
+        return 1;
+    }
+
+    throw std::invalid_argument("Vertex is not an external-face neighbor.");
+}
+
+void BmPartialEmbedding::setExternalFaceNeighbors(int internalVertexId, int firstNeighborId,
+                                                  int secondNeighborId) {
+    validateInternalVertex(internalVertexId);
+
+    if (firstNeighborId != -1) {
+        validateInternalVertex(firstNeighborId);
+    }
+
+    if (secondNeighborId != -1) {
+        validateInternalVertex(secondNeighborId);
+    }
+
+    internalVertices_[internalVertexId].externalFaceNeighbors = {firstNeighborId, secondNeighborId};
+}
+
+void BmPartialEmbedding::setExternalFaceNeighbor(int internalVertexId, int side,
+                                                 int neighborInternalVertexId) {
+    validateInternalVertex(internalVertexId);
+    validateInternalVertex(neighborInternalVertexId);
+
+    if (side < 0 || side > 1) {
+        throw std::out_of_range("External face side must be 0 or 1.");
+    }
+
+    internalVertices_[internalVertexId].externalFaceNeighbors[side] = neighborInternalVertexId;
+}
+
+void BmPartialEmbedding::shortcutExternalFacePath(int rootInternalVertexId, int rootSide,
+                                                  int stoppingInternalVertexId,
+                                                  int stoppingIncomingLink) {
+    validateInternalVertex(rootInternalVertexId);
+    validateInternalVertex(stoppingInternalVertexId);
+
+    if (rootSide < 0 || rootSide > 1) {
+        throw std::out_of_range("Root side must be 0 or 1.");
+    }
+
+    if (stoppingIncomingLink < 0 || stoppingIncomingLink > 1) {
+        throw std::out_of_range("Stopping incoming link must be 0 or 1.");
+    }
+
+    int targetVertex = stoppingInternalVertexId;
+
+    int targetIncomingLink = stoppingIncomingLink;
+
+    // Preserve at least three vertices on the external face.
+    // If the opposite root side already points to the stopping
+    // vertex, move the shortcut endpoint back by one vertex.
+    if (externalFaceNeighbor(rootInternalVertexId, 1 - rootSide) == targetVertex) {
+        const int oldTarget = targetVertex;
+
+        targetVertex = externalFaceNeighbor(targetVertex, targetIncomingLink);
+
+        targetIncomingLink = externalFaceNeighbor(targetVertex, 0) == oldTarget ? 1 : 0;
+    }
+
+    setExternalFaceNeighbor(rootInternalVertexId, rootSide, targetVertex);
+
+    setExternalFaceNeighbor(targetVertex, targetIncomingLink, rootInternalVertexId);
 }
 
 } // namespace bm

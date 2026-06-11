@@ -3,20 +3,15 @@
 #include <vector>
 
 #include "bm/BmEmbeddingState.hpp"
+#include "bm/BmExternalFaceTraversal.hpp"
 
 namespace bm {
 
 struct BmMergeFrame {
-    // Non-virtual cut vertex r.
     int cutVertex = -1;
-
-    // r_in from Appendix B.
     int cutVertexIncomingLink = -1;
 
-    // Virtual root r^c represented by a BmBicompRoot id.
     int rootId = -1;
-
-    // r^c_out from Appendix B.
     int rootOutgoingLink = -1;
 };
 
@@ -27,6 +22,16 @@ public:
 
     static void mergeAllBiconnectedComponents(BmEmbeddingState& state,
                                               std::vector<BmMergeFrame>& mergeStack);
+
+    static BmExternalFacePosition getActiveSuccessorOnExternalFace(const BmEmbeddingState& state,
+                                                                   BmExternalFacePosition start,
+                                                                   int currentVertex);
+
+    static int embedBackEdge(BmEmbeddingState& state, int rootId, int rootOutgoingLink,
+                             int descendantVertex, int descendantIncomingLink, int currentVertex);
+
+    static int embedShortCircuitEdge(BmEmbeddingState& state, int rootId, int rootOutgoingLink,
+                                     int stoppingVertex, int stoppingVertexIncomingLink);
 };
 
 } // namespace bm

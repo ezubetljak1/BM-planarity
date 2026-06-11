@@ -18,6 +18,7 @@ add_library(bm_planarity
     src/BmExternalFaceTraversal.cpp
     src/BmWalkup.cpp
     src/BmEmbeddingOperations.cpp
+    src/BmWalkdown.cpp
 )
 
 target_include_directories(bm_planarity
@@ -38,6 +39,7 @@ add_executable(bm_planarity_tests
     tests/BmExternalFaceTraversalTest.cpp
     tests/BmWalkupTest.cpp
     tests/BmEmbeddingOperationsTest.cpp
+    tests/BmWalkdownTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
