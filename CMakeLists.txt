@@ -22,6 +22,7 @@ add_library(bm_planarity
     src/BmEmbeddingValidator.cpp
     src/BmEmbeddingRecovery.cpp
     src/PlanarEmbeddingValidator.cpp
+    src/KuratowskiCertificateVerifier.cpp
 )
 
 target_include_directories(bm_planarity
@@ -46,6 +47,7 @@ add_executable(bm_planarity_tests
     tests/BmEmbeddingValidatorTest.cpp
     tests/BmEmbeddingRecoveryTest.cpp
     tests/PlanarEmbeddingValidatorTest.cpp
+    tests/KuratowskiCertificateVerifierTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
@@ -80,6 +82,17 @@ add_executable(bm_planarity_embedding_cli
 )
 
 target_link_libraries(bm_planarity_embedding_cli
+    PRIVATE
+        bm_planarity
+)
+
+
+# Batch CLI used to validate Kuratowski certificates.
+add_executable(bm_kuratowski_verifier_cli
+    tools/BmKuratowskiVerifierCli.cpp
+)
+
+target_link_libraries(bm_kuratowski_verifier_cli
     PRIVATE
         bm_planarity
 )
@@ -122,6 +135,22 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
         bm_embedding_regression_quick
         PROPERTIES
             LABELS "embedding;differential"
+            TIMEOUT 120
+    )
+
+    add_test(
+        NAME bm_kuratowski_verifier_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/kuratowski_verifier_regression.py
+            --cli $<TARGET_FILE:bm_kuratowski_verifier_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_kuratowski_verifier_regression_quick
+        PROPERTIES
+            LABELS "kuratowski;differential"
             TIMEOUT 120
     )
 endif()

@@ -91,3 +91,24 @@ provides an independent check before later visualization code relies on the resu
 - `PlanarEmbeddingValidator` checks endpoint occurrences and Euler's relation per connected
   component.
 - Shortcut links remain traversal-only data and never appear in the exported rotation system.
+
+
+---
+
+## DD-007 — Validate Kuratowski subdivisions independently before extraction
+
+### Decision
+Implement a linear `KuratowskiCertificateVerifier` before integrating the reference-style A-E
+Kuratowski isolator into the non-planar failure path.
+
+### Reason
+A certificate extractor must not be trusted merely because the decision core reports
+`NONPLANAR`. The selected original edge IDs must independently suppress to exactly `K5` or
+`K3,3`. A verifier also enables broad regression testing with witnesses obtained from NetworkX.
+
+### Consequences
+- The verifier accepts only original edge IDs and never shortcut traversal links.
+- Degree-2 subdivision paths are suppressed logically without mutating the input graph.
+- The verifier runs in `O(n + m)` time.
+- Automatic extraction remains a separate next phase based on the Boyer-Myrvold non-planarity
+  minors A-E and preserved Walkdown failure context.

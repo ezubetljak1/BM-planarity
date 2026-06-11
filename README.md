@@ -346,3 +346,81 @@ ctest --test-dir build --output-on-failure -L differential
 ```
 
 Tada CTest pokreće i provjeru odluke planarnosti i provjeru recovered embeddinga.
+
+
+## Validacija Kuratowski certifikata
+
+Prije implementacije automatskog izdvajanja Kuratowski certifikata dodan je nezavisni linearni verifier:
+
+```text
+KuratowskiCertificateVerifier
+```
+
+Verifier prima originalni graf i skup originalnih edge ID-jeva te provjerava da li odabrane grane
+čine subdiviziju grafa `K5` ili `K3,3`. Provjera radi bez oslanjanja na Boyer-Myrvold decision core:
+
+```text
+provjeri validnost i jedinstvenost originalnih edge ID-jeva
+izgradi podgraf certifikata
+prepoznaj branch vertexe i degree-2 subdivision vertexe
+potisni degree-2 puteve u kernel grane
+provjeri da kernel odgovara K5 ili K3,3
+```
+
+Ukupna složenost verifiera je linearna u veličini ulaznog grafa i certifikata:
+
+```text
+O(n + m)
+```
+
+### NetworkX regresija verifiera
+
+Dodatni alati:
+
+```text
+tools/
+  BmKuratowskiVerifierCli.cpp       Batch CLI oko C++ verifiera
+  kuratowski_verifier_regression.py Python skripta za široku provjeru verifiera
+```
+
+Python skripta generiše neplanarne grafove, poziva:
+
+```python
+networkx.check_planarity(graph, counterexample=True)
+```
+
+zatim mapira grane NetworkX kontraprimjera na originalne edge ID-jeve i šalje ih C++ verifieru.
+Na taj način se verifier testira na većem skupu različitih `K5` i `K3,3` subdivizija.
+
+Brzi profil:
+
+```powershell
+py tools\kuratowski_verifier_regression.py `
+    --cli .\build\bm_kuratowski_verifier_cli.exe `
+    --profile quick
+```
+
+Puni profil:
+
+```powershell
+py tools\kuratowski_verifier_regression.py `
+    --cli .\build\bm_kuratowski_verifier_cli.exe `
+    --profile full
+```
+
+Kod Visual Studio generatora executable se najčešće nalazi u `Debug` folderu:
+
+```powershell
+py tools\kuratowski_verifier_regression.py `
+    --cli .\build\Debug\bm_kuratowski_verifier_cli.exe `
+    --profile quick
+```
+
+Ako su opcionalni Python testovi uključeni kroz CMake, brzi verifier regression ulazi i u:
+
+```powershell
+ctest --test-dir build --output-on-failure -L differential
+```
+
+Napomena: ovaj sloj validira certifikate, ali još ne izdvaja certifikat automatski iz
+Boyer-Myrvold failure stanja. Referentni A-E isolator predstavlja narednu fazu implementacije.
