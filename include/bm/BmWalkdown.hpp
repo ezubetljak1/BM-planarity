@@ -10,7 +10,8 @@ namespace bm {
 
 enum class BmWalkdownFailureReason {
     BlockedChildBicomp,
-    NonEmptyMergeStack
+    NonEmptyMergeStack,
+    UnembeddedBackedge
 };
 
 struct BmWalkdownFailure {
@@ -23,6 +24,10 @@ struct BmWalkdownFailure {
     int blockingVertex = -1;
     int blockingIncomingLink = -1;
     int blockingChildRootId = -1;
+
+    // Filled when the decision phase reports an unembedded back edge after Walkdown.
+    int unembeddedEdgeId = -1;
+    int unembeddedDescendantVertex = -1;
 
     std::vector<BmMergeFrame> mergeStack;
 };

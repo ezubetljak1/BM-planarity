@@ -34,6 +34,7 @@ void DfsPreprocessor::initialize() {
 
     info_.parent.assign(n, -1);
     info_.parentEdgeId.assign(n, -1);
+    info_.subtreeEndDfi.assign(n, -1);
     info_.children.assign(n, {});
 
     info_.treeEdgeIds.clear();
@@ -88,6 +89,7 @@ void DfsPreprocessor::dfs(int startVertex, int componentId) {
         const int vertex = frame.vertex;
 
         if (frame.nextAdjacencyIndex >= adjacency[vertex].size()) {
+            info_.subtreeEndDfi[vertex] = nextDfsIndex_ - 1;
             stack.pop_back();
 
             const int parent = info_.parent[vertex];

@@ -12,10 +12,13 @@ BmKuratowskiExtractionContext BmKuratowskiExtractionContextBuilder::initialize(
 
     int centralRootId = failure.topRootId;
 
-    // Matches the reference isolator initialization: when Walkdown failed
-    // with a non-empty merge stack, the principal bicomp is the root stored
-    // at the top of that stack rather than the root on which Walkdown started.
-    if (!failure.mergeStack.empty()) {
+    // If Walkdown could not descend into a pertinent child bicomp, that
+    // blocked child is the principal bicomp of Minor A. When Walkdown
+    // stopped with a non-empty merge stack, the principal bicomp is the
+    // root stored at the top of that stack.
+    if (failure.reason == BmWalkdownFailureReason::BlockedChildBicomp) {
+        centralRootId = failure.blockingChildRootId;
+    } else if (!failure.mergeStack.empty()) {
         centralRootId = failure.mergeStack.back().rootId;
     }
 
