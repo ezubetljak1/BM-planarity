@@ -31,7 +31,7 @@ BM_TEST(BoyerMyrvoldRunHandlesSingleVertexGraph) {
     BM_ASSERT(result.embedding->clockwiseEdgesAroundVertex.size() == 1);
 }
 
-BM_TEST(BoyerMyrvoldRunHandlesSimpleTreePlaceholder) {
+BM_TEST(BoyerMyrvoldRunReturnsRecoveredEmbeddingForSimpleTree) {
     Graph graph(4);
 
     graph.addEdge(0, 1);
@@ -44,6 +44,10 @@ BM_TEST(BoyerMyrvoldRunHandlesSimpleTreePlaceholder) {
     BM_ASSERT(result.planar);
     BM_ASSERT(result.embedding.has_value());
     BM_ASSERT(result.embedding->clockwiseEdgesAroundVertex.size() == 4);
+    BM_ASSERT(result.embedding->clockwiseEdgesAroundVertex[0].size() == 1);
+    BM_ASSERT(result.embedding->clockwiseEdgesAroundVertex[1].size() == 2);
+    BM_ASSERT(result.embedding->clockwiseEdgesAroundVertex[2].size() == 2);
+    BM_ASSERT(result.embedding->clockwiseEdgesAroundVertex[3].size() == 1);
     BM_ASSERT(!result.certificate.has_value());
 }
 

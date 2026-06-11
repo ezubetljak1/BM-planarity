@@ -177,7 +177,7 @@ Python skripta koristi više grupa grafova:
 
 ```text
 Graph Atlas grafovi
-iscrpno generisani mali simple grafovi
+svi mali simple grafovi generisani iscrpnom pretragom
 nasumično generisani G(n, p) grafovi
 ```
 
@@ -278,3 +278,71 @@ py tools\differential_regression.py `
     --profile full
 ```
 
+
+
+## Validacija recovered planar embeddinga
+
+Nakon uspješne odluke da je graf planaran, biblioteka više ne vraća placeholder nego stvarni
+rotation system originalnih edge ID-jeva:
+
+```cpp
+result.embedding->clockwiseEdgesAroundVertex[vertex]
+```
+
+Svaki unutrašnji vektor sadrži ciklični redoslijed grana incidentnih na odgovarajući vertex.
+Globalna refleksija embeddinga je dozvoljena, pa redoslijed ne mora biti identičan redoslijedu koji
+vrati druga biblioteka; bitno je da opisuje validan planarni embedding.
+
+C++ klasa:
+
+```text
+PlanarEmbeddingValidator
+```
+
+nezavisno provjerava:
+
+```text
+svaki originalni edge se pojavljuje tačno jednom oko oba endpointa
+lokalni redoslijedi odgovaraju stepenima vertexa
+obilazak lica zatvara cikluse
+Eulerova relacija važi za svaku povezanu komponentu
+```
+
+### NetworkX embedding regression testovi
+
+Pored differential poređenja odluke planarnosti, projekat sadrži i opcionalnu provjeru recovered
+rotation systema kroz `networkx.PlanarEmbedding.check_structure()`.
+
+Dodatni alati:
+
+```text
+tools/
+  BmEmbeddingCli.cpp       Batch CLI koji ispisuje recovered rotation system
+  embedding_regression.py Python skripta koja validira rotation system kroz NetworkX
+```
+
+Brzi profil:
+
+```powershell
+py tools\embedding_regression.py `
+    --cli .\build\bm_planarity_embedding_cli.exe `
+    --profile quick
+```
+
+Puni profil prije merge-a većih izmjena:
+
+```powershell
+py tools\embedding_regression.py `
+    --cli .\build\bm_planarity_embedding_cli.exe `
+    --profile full
+```
+
+Ako su opcionalni Python testovi uključeni kroz CMake:
+
+```powershell
+cmake -S . -B build -G Ninja -DBM_ENABLE_DIFFERENTIAL_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure -L differential
+```
+
+Tada CTest pokreće i provjeru odluke planarnosti i provjeru recovered embeddinga.

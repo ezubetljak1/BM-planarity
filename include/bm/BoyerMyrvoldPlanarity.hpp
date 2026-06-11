@@ -13,7 +13,7 @@ public:
 
 private:
 
-    static PlanarityResult makePlaceholderPlanarResult(const Graph& graph);
+    static PlanarityResult makePlanarResult(PlanarEmbedding embedding);
     static PlanarityResult makePlaceholderNonPlanarResult();
 };
 
