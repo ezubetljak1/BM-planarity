@@ -1,5 +1,8 @@
 #include "bm/BoyerMyrvoldPlanarity.hpp"
 #include "bm/SimpleGraphValidator.hpp"
+#include "bm/BmEmbeddingRecovery.hpp"
+
+#include <utility>
 #include "bm/BmWalkdown.hpp"
 #include "bm/BmWalkup.hpp"
 
@@ -54,18 +57,14 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
         }
     }
 
-    // Recovery dolazi kao naredni blok.
-    return makePlaceholderPlanarResult(graph);
+    return makePlanarResult(BmEmbeddingRecovery::recover(state));
 }
 
 
-PlanarityResult BoyerMyrvoldPlanarity::makePlaceholderPlanarResult(const Graph& graph) {
-    PlanarEmbedding embedding;
-    embedding.clockwiseEdgesAroundVertex.resize(graph.vertexCount());
-
+PlanarityResult BoyerMyrvoldPlanarity::makePlanarResult(PlanarEmbedding embedding) {
     PlanarityResult result;
     result.planar = true;
-    result.embedding = embedding;
+    result.embedding = std::move(embedding);
     result.certificate = std::nullopt;
 
     return result;

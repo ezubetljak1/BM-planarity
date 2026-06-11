@@ -20,6 +20,8 @@ add_library(bm_planarity
     src/BmEmbeddingOperations.cpp
     src/BmWalkdown.cpp
     src/BmEmbeddingValidator.cpp
+    src/BmEmbeddingRecovery.cpp
+    src/PlanarEmbeddingValidator.cpp
 )
 
 target_include_directories(bm_planarity
@@ -42,6 +44,8 @@ add_executable(bm_planarity_tests
     tests/BmEmbeddingOperationsTest.cpp
     tests/BmWalkdownTest.cpp
     tests/BmEmbeddingValidatorTest.cpp
+    tests/BmEmbeddingRecoveryTest.cpp
+    tests/PlanarEmbeddingValidatorTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
@@ -70,6 +74,16 @@ target_link_libraries(bm_planarity_decision_cli
         bm_planarity
 )
 
+# Batch CLI used to validate recovered rotation systems with NetworkX.
+add_executable(bm_planarity_embedding_cli
+    tools/BmEmbeddingCli.cpp
+)
+
+target_link_libraries(bm_planarity_embedding_cli
+    PRIVATE
+        bm_planarity
+)
+
 option(
     BM_ENABLE_DIFFERENTIAL_TESTS
     "Enable the optional NetworkX-based differential regression CTest"
@@ -92,6 +106,22 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
         bm_differential_regression_quick
         PROPERTIES
             LABELS "differential"
+            TIMEOUT 120
+    )
+
+    add_test(
+        NAME bm_embedding_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/embedding_regression.py
+            --cli $<TARGET_FILE:bm_planarity_embedding_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_embedding_regression_quick
+        PROPERTIES
+            LABELS "embedding;differential"
             TIMEOUT 120
     )
 endif()

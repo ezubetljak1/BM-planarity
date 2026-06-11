@@ -69,3 +69,25 @@ link can remain hidden until a later graph triggers the corrupted path.
 ### Consequences
 Regression tests validate twin relations, circular adjacency links, bicomp-root metadata and
 original-edge mappings independently of the final planarity decision.
+
+
+---
+
+## DD-006 — Recover and validate a combinatorial embedding before drawing
+
+### Decision
+After a successful planarity decision, orient the remaining bicomps, merge their virtual root
+copies into the corresponding original vertices and return a rotation system of original edge IDs.
+Validate that rotation system independently before exposing it as the public planar embedding.
+
+### Reason
+The edge-addition phase only determines and incrementally constructs a partial embedding. Lazy flip
+signs and separated bicomps must be resolved during post-processing. A rotation-system validator
+provides an independent check before later visualization code relies on the result.
+
+### Consequences
+- `BmEmbeddingRecovery` follows the post-processing split used by the reference implementation:
+  orient bicomps, join remaining bicomps, then export rotations.
+- `PlanarEmbeddingValidator` checks endpoint occurrences and Euler's relation per connected
+  component.
+- Shortcut links remain traversal-only data and never appear in the exported rotation system.
