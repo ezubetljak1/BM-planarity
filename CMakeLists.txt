@@ -60,3 +60,38 @@ add_test(
     NAME bm_planarity_tests
     COMMAND bm_planarity_tests
 )
+# Batch CLI used by differential regression and later benchmarking tools.
+add_executable(bm_planarity_decision_cli
+    tools/BmDecisionCli.cpp
+)
+
+target_link_libraries(bm_planarity_decision_cli
+    PRIVATE
+        bm_planarity
+)
+
+option(
+    BM_ENABLE_DIFFERENTIAL_TESTS
+    "Enable the optional NetworkX-based differential regression CTest"
+    OFF
+)
+
+if(BM_ENABLE_DIFFERENTIAL_TESTS)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+    add_test(
+        NAME bm_differential_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/differential_regression.py
+            --cli $<TARGET_FILE:bm_planarity_decision_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_differential_regression_quick
+        PROPERTIES
+            LABELS "differential"
+            TIMEOUT 120
+    )
+endif()

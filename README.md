@@ -134,3 +134,147 @@ tests/TestMain.cpp
 Passed: 4
 Failed: 0
 ```
+
+## Differential regression testovi
+
+Pored ciljanih C++ unit testova, projekat sadrži i opcionalni differential regression test sistem.
+
+Cilj ovih testova je provjera odluke o planarnosti nad većim brojem različitih grafova. Za svaki generisani graf porede se:
+
+```text
+rezultat vlastite C++ implementacije Boyer-Myrvold algoritma
+rezultat nezavisne NetworkX implementacije testa planarnosti
+```
+
+Provjerava se isključivo odluka:
+
+```text
+PLANAR / NONPLANAR
+```
+
+Testovi obuhvataju i planarne i neplanarne simple grafove.
+
+Za poređenje se koristi funkcija:
+
+```python
+networkx.check_planarity(graph, counterexample=False)
+```
+
+Opcija `counterexample=False` znači da se tokom differential testiranja ne izdvaja Kuratowski certifikat, nego se provjerava samo odluka o planarnosti.
+
+### Struktura differential test alata
+
+```text
+tools/
+  BmDecisionCli.cpp           Batch CLI wrapper oko C++ biblioteke
+  differential_regression.py Python skripta za generisanje i poređenje grafova
+  requirements.txt           Python zavisnosti
+```
+
+`BmDecisionCli.cpp` omogućava da Python skripta pošalje više grafova jednom pokrenutom C++ procesu. Time se izbjegava ponovno pokretanje executable fajla za svaki pojedinačni graf.
+
+Python skripta koristi više grupa grafova:
+
+```text
+Graph Atlas grafovi
+iscrpno generisani mali simple grafovi
+nasumično generisani G(n, p) grafovi
+```
+
+Ako skripta pronađe razliku između C++ implementacije i NetworkX rezultata, ispisuje konkretan graf i njegovu listu grana kako bi se slučaj mogao trajno dodati kao novi C++ regresijski test.
+
+## Instalacija Python zavisnosti
+
+Za pokretanje differential regression testova potrebno je imati instaliran Python.
+
+Iz root foldera projekta pokrenuti:
+
+```powershell
+py -m pip install -r tools\requirements.txt
+```
+
+## Build sa uključenim differential testovima
+
+Differential testovi su opcionalni i podrazumijevano nisu uključeni u standardni build.
+
+Za uključivanje testova potrebno je ponovo konfigurirati projekat:
+
+```powershell
+cmake -S . -B build -G Ninja -DBM_ENABLE_DIFFERENTIAL_TESTS=ON
+cmake --build build
+```
+
+Ako se koristi default CMake generator:
+
+```powershell
+cmake -S . -B build -DBM_ENABLE_DIFFERENTIAL_TESTS=ON
+cmake --build build
+```
+
+## Pokretanje brzog differential testa
+
+Brzi profil je namijenjen redovnoj provjeri tokom razvoja:
+
+```powershell
+py tools\differential_regression.py `
+    --cli .\build\bm_planarity_decision_cli.exe `
+    --profile quick
+```
+
+Kod Visual Studio generatora CLI executable se najčešće nalazi u `Debug` folderu:
+
+```powershell
+py tools\differential_regression.py `
+    --cli .\build\Debug\bm_planarity_decision_cli.exe `
+    --profile quick
+```
+
+Ako su differential testovi uključeni kroz CMake, brzi profil se može pokrenuti i kroz CTest:
+
+```powershell
+ctest --test-dir build --output-on-failure -L differential
+```
+
+## Pokretanje punog differential testa
+
+Puni profil obuhvata znatno veći broj grafova i preporučuje se prije merge-a većih algoritamskih izmjena u `main` granu:
+
+```powershell
+py tools\differential_regression.py `
+    --cli .\build\bm_planarity_decision_cli.exe `
+    --profile full
+```
+
+Kod Visual Studio generatora:
+
+```powershell
+py tools\differential_regression.py `
+    --cli .\build\Debug\bm_planarity_decision_cli.exe `
+    --profile full
+```
+
+## Uloga pojedinačnih vrsta testova
+
+Ciljani C++ testovi i differential regression testovi imaju različite uloge:
+
+```text
+C++ unit testovi
+    provjeravaju pojedinačne strukture, operacije i poznate grafove
+    precizno lociraju fazu algoritma u kojoj se pojavila greška
+
+Differential regression testovi
+    provjeravaju odluku planarnosti nad velikim brojem grafova
+    otkrivaju neočekivane regresije i rubne slučajeve
+    porede rezultat sa nezavisnom implementacijom
+```
+
+Preporučeni redoslijed provjere prije merge-a u `main` granu:
+
+```powershell
+cmake --build build
+ctest --test-dir build --output-on-failure
+py tools\differential_regression.py `
+    --cli .\build\bm_planarity_decision_cli.exe `
+    --profile full
+```
+
