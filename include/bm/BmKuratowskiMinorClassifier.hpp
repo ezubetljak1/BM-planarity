@@ -23,6 +23,14 @@ public:
         const BmEmbeddingState& state,
         const BmKuratowskiExtractionContext& context
     );
+
+    // Completes the reference-style C/D/E analysis when the initial A/B
+    // tests do not decide the obstruction type. The context is enriched with
+    // P_x, P_y, the highest X-Y path and, where applicable, Z.
+    static BmKuratowskiMinorType classifyComplete(
+        const BmEmbeddingState& state,
+        BmKuratowskiExtractionContext& context
+    );
 };
 
 } // namespace bm

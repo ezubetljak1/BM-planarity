@@ -5,6 +5,8 @@
 #include "bm/BmKuratowskiExtractionContext.hpp"
 #include "bm/BmKuratowskiFailureFactory.hpp"
 #include "bm/BmKuratowskiMinorClassifier.hpp"
+#include "bm/BmKuratowskiInternalPathAnalyzer.hpp"
+#include "bm/BmEmbeddingRecovery.hpp"
 #include "bm/BmKuratowskiPathMarker.hpp"
 #include "bm/BmKuratowskiExtractor.hpp"
 #include "bm/KuratowskiCertificateVerifier.hpp"
@@ -56,6 +58,42 @@ Graph makeInitialMinorBGraph() {
     graph.addEdge(2, 3);
     graph.addEdge(2, 4);
     graph.addEdge(2, 5);
+    graph.addEdge(3, 5);
+
+    return graph;
+}
+
+
+Graph makeInitialMinorCGraph() {
+    Graph graph(6);
+
+    graph.addEdge(0, 3);
+    graph.addEdge(0, 4);
+    graph.addEdge(0, 5);
+    graph.addEdge(1, 3);
+    graph.addEdge(1, 4);
+    graph.addEdge(1, 5);
+    graph.addEdge(2, 3);
+    graph.addEdge(2, 4);
+    graph.addEdge(2, 5);
+    graph.addEdge(3, 4);
+
+    return graph;
+}
+
+Graph makeInitialMinorDGraph() {
+    Graph graph(6);
+
+    graph.addEdge(0, 1);
+    graph.addEdge(0, 2);
+    graph.addEdge(0, 3);
+    graph.addEdge(1, 2);
+    graph.addEdge(1, 3);
+    graph.addEdge(1, 4);
+    graph.addEdge(1, 5);
+    graph.addEdge(2, 4);
+    graph.addEdge(2, 5);
+    graph.addEdge(3, 4);
     graph.addEdge(3, 5);
 
     return graph;
@@ -253,5 +291,64 @@ BM_TEST(BmKuratowskiExtractorIsolatesInitialMinorB) {
 
         KuratowskiCertificateVerifier::validate(graph, certificate);
         BM_ASSERT(certificate.type == KuratowskiType::K33);
+    });
+}
+
+BM_TEST(BmKuratowskiMinorClassifierRecognizesMinorC) {
+    const Graph graph = makeInitialMinorCGraph();
+
+    inspectFirstFailure(graph, [](const BmEmbeddingState& state, const BmWalkdownFailure& failure) {
+        BmEmbeddingState orientedState = state;
+        BmEmbeddingRecovery::orientForIsolation(orientedState);
+
+        BmKuratowskiExtractionContext context =
+            BmKuratowskiExtractionContextBuilder::initialize(orientedState, failure);
+
+        BM_ASSERT(
+            BmKuratowskiMinorClassifier::classifyComplete(orientedState, context)
+            == BmKuratowskiMinorType::C
+        );
+        BM_ASSERT(context.px >= 0);
+        BM_ASSERT(context.py >= 0);
+        BM_ASSERT(!context.xyPathOriginalEdgeIds.empty());
+    });
+}
+
+BM_TEST(BmKuratowskiMinorClassifierRecognizesMinorD) {
+    const Graph graph = makeInitialMinorDGraph();
+
+    inspectFirstFailure(graph, [](const BmEmbeddingState& state, const BmWalkdownFailure& failure) {
+        BmEmbeddingState orientedState = state;
+        BmEmbeddingRecovery::orientForIsolation(orientedState);
+
+        BmKuratowskiExtractionContext context =
+            BmKuratowskiExtractionContextBuilder::initialize(orientedState, failure);
+
+        BM_ASSERT(
+            BmKuratowskiMinorClassifier::classifyComplete(orientedState, context)
+            == BmKuratowskiMinorType::D
+        );
+        BM_ASSERT(context.z >= 0);
+        BM_ASSERT(!context.xyPathOriginalEdgeIds.empty());
+        BM_ASSERT(!context.zToRootOriginalEdgeIds.empty());
+    });
+}
+
+BM_TEST(BmKuratowskiMinorClassifierRecognizesMinorEForK5) {
+    const Graph graph = makeK5();
+
+    inspectFirstFailure(graph, [](const BmEmbeddingState& state, const BmWalkdownFailure& failure) {
+        BmEmbeddingState orientedState = state;
+        BmEmbeddingRecovery::orientForIsolation(orientedState);
+
+        BmKuratowskiExtractionContext context =
+            BmKuratowskiExtractionContextBuilder::initialize(orientedState, failure);
+
+        BM_ASSERT(
+            BmKuratowskiMinorClassifier::classifyComplete(orientedState, context)
+            == BmKuratowskiMinorType::E
+        );
+        BM_ASSERT(context.z == context.pertinentVertex);
+        BM_ASSERT(!context.xyPathOriginalEdgeIds.empty());
     });
 }

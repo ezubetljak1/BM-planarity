@@ -29,6 +29,8 @@ add_library(bm_planarity
     src/BmKuratowskiPathMarker.cpp
     src/BmKuratowskiConnectionFinder.cpp
     src/BmKuratowskiMinorClassifier.cpp
+    src/BmKuratowskiInternalPathAnalyzer.cpp
+    src/BmKuratowskiIsolationPreparation.cpp
     src/BmKuratowskiExtractor.cpp
 )
 
@@ -106,6 +108,17 @@ target_link_libraries(bm_kuratowski_verifier_cli
         bm_planarity
 )
 
+
+# Batch CLI used to smoke-test Kuratowski minor classification.
+add_executable(bm_kuratowski_classifier_cli
+    tools/BmKuratowskiClassifierCli.cpp
+)
+
+target_link_libraries(bm_kuratowski_classifier_cli
+    PRIVATE
+        bm_planarity
+)
+
 option(
     BM_ENABLE_DIFFERENTIAL_TESTS
     "Enable the optional NetworkX-based differential regression CTest"
@@ -158,6 +171,22 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
 
     set_tests_properties(
         bm_kuratowski_verifier_regression_quick
+        PROPERTIES
+            LABELS "kuratowski;differential"
+            TIMEOUT 120
+    )
+
+    add_test(
+        NAME bm_kuratowski_classifier_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/kuratowski_classifier_regression.py
+            --cli $<TARGET_FILE:bm_kuratowski_classifier_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_kuratowski_classifier_regression_quick
         PROPERTIES
             LABELS "kuratowski;differential"
             TIMEOUT 120
