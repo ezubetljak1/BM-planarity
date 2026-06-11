@@ -3,10 +3,33 @@
 #include "bm/BmEmbeddingOperations.hpp"
 #include "bm/BmEmbeddingState.hpp"
 
+#include <optional>
+#include <vector>
+
 namespace bm {
+
+enum class BmWalkdownFailureReason {
+    BlockedChildBicomp,
+    NonEmptyMergeStack
+};
+
+struct BmWalkdownFailure {
+    BmWalkdownFailureReason reason = BmWalkdownFailureReason::BlockedChildBicomp;
+
+    int currentVertex = -1;
+    int topRootId = -1;
+    int rootOutgoingLink = -1;
+
+    int blockingVertex = -1;
+    int blockingIncomingLink = -1;
+    int blockingChildRootId = -1;
+
+    std::vector<BmMergeFrame> mergeStack;
+};
 
 struct BmWalkdownResult {
     bool completed = true;
+    std::optional<BmWalkdownFailure> failure;
 };
 
 class BmWalkdown {

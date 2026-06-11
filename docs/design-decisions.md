@@ -112,3 +112,26 @@ A certificate extractor must not be trusted merely because the decision core rep
 - The verifier runs in `O(n + m)` time.
 - Automatic extraction remains a separate next phase based on the Boyer-Myrvold non-planarity
   minors A-E and preserved Walkdown failure context.
+
+---
+
+## DD-008 — Preserve Walkdown failure context and separate real-face traversal
+
+### Decision
+When Walkdown reports non-planarity, preserve the local failure context needed by the Kuratowski
+isolator. Introduce `BmRealExternalFaceTraversal` for certificate extraction and keep it separate
+from the optimized shortcut traversal used by Walkup and Walkdown.
+
+### Reason
+The Boyer-Myrvold isolator must inspect the real external face of the principal bicomp. Shortcut
+links deliberately skip inactive paths and are therefore unsuitable for marking the original
+subdivision paths that form a certificate. The reference implementation explicitly ignores
+external-face optimization links while initializing the obstruction context.
+
+### Consequences
+- `BmWalkdownResult` stores a structured `BmWalkdownFailure` snapshot.
+- `BmRealExternalFaceTraversal` follows actual half-edge anchors and ignores shortcut links.
+- `BmKuratowskiExtractionContextBuilder` initializes the principal root, stopping vertices and the
+  first pertinent vertex needed by the later minor A-E isolator.
+- Certificate extraction can continue without rerunning the decision algorithm or reconstructing a
+  lost conflict state.

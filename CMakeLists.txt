@@ -23,6 +23,8 @@ add_library(bm_planarity
     src/BmEmbeddingRecovery.cpp
     src/PlanarEmbeddingValidator.cpp
     src/KuratowskiCertificateVerifier.cpp
+    src/BmRealExternalFaceTraversal.cpp
+    src/BmKuratowskiExtractionContext.cpp
 )
 
 target_include_directories(bm_planarity
@@ -48,6 +50,7 @@ add_executable(bm_planarity_tests
     tests/BmEmbeddingRecoveryTest.cpp
     tests/PlanarEmbeddingValidatorTest.cpp
     tests/KuratowskiCertificateVerifierTest.cpp
+    tests/BmKuratowskiExtractionContextTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
