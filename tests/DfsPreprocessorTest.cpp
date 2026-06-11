@@ -99,3 +99,20 @@ BM_TEST(DfsPreprocessorHandlesDisconnectedGraphAsForest) {
     BM_ASSERT(info.componentId[2] != info.componentId[0]);
     BM_ASSERT(info.componentId[2] != info.componentId[3]);
 }
+BM_TEST(DfsPreprocessorHandlesDeepPathWithoutRecursion) {
+    constexpr int vertexCount = 100000;
+
+    Graph graph(vertexCount);
+
+    for (int vertex = 0; vertex + 1 < vertexCount; ++vertex) {
+        graph.addEdge(vertex, vertex + 1);
+    }
+
+    DfsPreprocessor preprocessor;
+    const DfsInfo dfsInfo = preprocessor.run(graph);
+
+    BM_ASSERT(dfsInfo.vertexCount == vertexCount);
+    BM_ASSERT(dfsInfo.treeEdgeIds.size() == static_cast<std::size_t>(vertexCount - 1));
+    BM_ASSERT(dfsInfo.backEdges.empty());
+    BM_ASSERT(dfsInfo.parent[vertexCount - 1] == vertexCount - 2);
+}

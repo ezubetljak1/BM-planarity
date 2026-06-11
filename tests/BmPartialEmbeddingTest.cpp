@@ -1,6 +1,7 @@
 #include "TestSupport.hpp"
 
 #include "bm/BmPartialEmbedding.hpp"
+#include "bm/BmExternalFaceTraversal.hpp"
 
 using namespace bm;
 
@@ -41,53 +42,7 @@ BM_TEST(BmPartialEmbeddingCreatesTreeEdgeBicomp) {
     BM_ASSERT(embeddedEdge.halfEdgeB == tree.childToRootHalfEdgeId);
 }
 
-BM_TEST(BmPartialEmbeddingLinksTreeBicompExternalFace) {
-    BmPartialEmbedding embedding(2);
 
-    const BmTreeBicompEmbedding tree = embedding.createTreeEdgeBicomp(0, 0, 1, 7);
-
-    const auto& rootToChild = embedding.halfEdge(tree.rootToChildHalfEdgeId);
-    const auto& childToRoot = embedding.halfEdge(tree.childToRootHalfEdgeId);
-
-    BM_ASSERT(rootToChild.from == tree.rootInternalVertexId);
-    BM_ASSERT(rootToChild.to == tree.childInternalVertexId);
-    BM_ASSERT(rootToChild.twin == tree.childToRootHalfEdgeId);
-
-    BM_ASSERT(childToRoot.from == tree.childInternalVertexId);
-    BM_ASSERT(childToRoot.to == tree.rootInternalVertexId);
-    BM_ASSERT(childToRoot.twin == tree.rootToChildHalfEdgeId);
-
-    BM_ASSERT(rootToChild.nextOnExternalFace == tree.childToRootHalfEdgeId);
-    BM_ASSERT(childToRoot.nextOnExternalFace == tree.rootToChildHalfEdgeId);
-
-    const auto face = embedding.externalFaceVertices(tree.rootToChildHalfEdgeId, 4);
-
-    BM_ASSERT(face.size() == 2);
-    BM_ASSERT(face[0] == tree.rootInternalVertexId);
-    BM_ASSERT(face[1] == tree.childInternalVertexId);
-}
-
-BM_TEST(BmPartialEmbeddingProvidesExternalFaceHelpers) {
-    BmPartialEmbedding embedding(2);
-
-    const BmTreeBicompEmbedding tree = embedding.createTreeEdgeBicomp(0, 0, 1, 7);
-
-    BM_ASSERT(embedding.twinHalfEdge(tree.rootToChildHalfEdgeId) == tree.childToRootHalfEdgeId);
-
-    BM_ASSERT(embedding.twinHalfEdge(tree.childToRootHalfEdgeId) == tree.rootToChildHalfEdgeId);
-
-    BM_ASSERT(embedding.nextOnExternalFace(tree.rootToChildHalfEdgeId) ==
-              tree.childToRootHalfEdgeId);
-
-    BM_ASSERT(embedding.previousOnExternalFace(tree.rootToChildHalfEdgeId) ==
-              tree.childToRootHalfEdgeId);
-
-    BM_ASSERT(embedding.externalFaceHalfEdge(tree.rootInternalVertexId, 0) ==
-              tree.rootToChildHalfEdgeId);
-
-    BM_ASSERT(embedding.externalFaceHalfEdge(tree.childInternalVertexId, 0) ==
-              tree.childToRootHalfEdgeId);
-}
 
 BM_TEST(BmPartialEmbeddingProvidesRootLookupHelpers) {
     BmPartialEmbedding embedding(2);
@@ -109,14 +64,12 @@ BM_TEST(BmPartialEmbeddingAddsGeneralEmbeddedEdge) {
     const int vertex0 = embedding.originalInternalVertex(0);
     const int vertex1 = embedding.originalInternalVertex(1);
 
-    const int edgeId = embedding.addEmbeddedEdge(vertex0, vertex1, 7, false);
+    const int edgeId = embedding.addEmbeddedEdge(vertex0, vertex1, 7);
 
     const BmEmbeddedEdge& edge = embedding.embeddedEdge(edgeId);
 
     BM_ASSERT(edge.originalEdgeId == 7);
-    BM_ASSERT(!edge.shortCircuit);
     BM_ASSERT(edge.sign == 1);
-    BM_ASSERT(edge.active);
 
     BM_ASSERT(!embedding.adjacencyEmpty(vertex0));
     BM_ASSERT(!embedding.adjacencyEmpty(vertex1));
@@ -135,9 +88,9 @@ BM_TEST(BmPartialEmbeddingMaintainsCircularAdjacencyList) {
     const int vertex1 = embedding.originalInternalVertex(1);
     const int vertex2 = embedding.originalInternalVertex(2);
 
-    const int edge01 = embedding.addEmbeddedEdge(vertex0, vertex1, 0, false);
+    const int edge01 = embedding.addEmbeddedEdge(vertex0, vertex1, 0);
 
-    const int edge02 = embedding.addEmbeddedEdge(vertex0, vertex2, 1, false);
+    const int edge02 = embedding.addEmbeddedEdge(vertex0, vertex2, 1);
 
     const int halfEdge01 = embedding.embeddedEdge(edge01).halfEdgeA;
     const int halfEdge02 = embedding.embeddedEdge(edge02).halfEdgeA;
@@ -170,9 +123,9 @@ BM_TEST(BmPartialEmbeddingReversesAdjacencyOrientation) {
     const int vertex1 = embedding.originalInternalVertex(1);
     const int vertex2 = embedding.originalInternalVertex(2);
 
-    const int edge01 = embedding.addEmbeddedEdge(vertex0, vertex1, 0, false);
+    const int edge01 = embedding.addEmbeddedEdge(vertex0, vertex1, 0);
 
-    const int edge02 = embedding.addEmbeddedEdge(vertex0, vertex2, 1, false);
+    const int edge02 = embedding.addEmbeddedEdge(vertex0, vertex2, 1);
 
     const int halfEdge01 = embedding.embeddedEdge(edge01).halfEdgeA;
     const int halfEdge02 = embedding.embeddedEdge(edge02).halfEdgeA;
@@ -183,4 +136,50 @@ BM_TEST(BmPartialEmbeddingReversesAdjacencyOrientation) {
 
     BM_ASSERT(embedding.externalFaceHalfEdge(vertex0, 0) == halfEdge02);
     BM_ASSERT(embedding.externalFaceHalfEdge(vertex0, 1) == halfEdge01);
+}
+BM_TEST(BmPartialEmbeddingShortcutsExternalFacePathWithoutCreatingFakeEdge) {
+    BmPartialEmbedding embedding(4);
+
+    const int vertex0 = embedding.originalInternalVertex(0);
+    const int vertex1 = embedding.originalInternalVertex(1);
+    const int vertex2 = embedding.originalInternalVertex(2);
+    const int vertex3 = embedding.originalInternalVertex(3);
+
+    const int edge01 = embedding.addEmbeddedEdge(vertex0, vertex1, 0);
+    const int edge12 = embedding.addEmbeddedEdge(vertex1, vertex2, 1);
+    const int edge23 = embedding.addEmbeddedEdge(vertex2, vertex3, 2);
+    const int edge30 = embedding.addEmbeddedEdge(vertex3, vertex0, 3);
+
+    embedding.setExternalFaceHalfEdges(vertex0, embedding.embeddedEdge(edge01).halfEdgeA,
+                                       embedding.embeddedEdge(edge30).halfEdgeB);
+    embedding.setExternalFaceHalfEdges(vertex1, embedding.embeddedEdge(edge01).halfEdgeB,
+                                       embedding.embeddedEdge(edge12).halfEdgeA);
+    embedding.setExternalFaceHalfEdges(vertex2, embedding.embeddedEdge(edge12).halfEdgeB,
+                                       embedding.embeddedEdge(edge23).halfEdgeA);
+    embedding.setExternalFaceHalfEdges(vertex3, embedding.embeddedEdge(edge23).halfEdgeB,
+                                       embedding.embeddedEdge(edge30).halfEdgeA);
+
+    embedding.setExternalFaceNeighbors(vertex0, vertex1, vertex3);
+    embedding.setExternalFaceNeighbors(vertex1, vertex0, vertex2);
+    embedding.setExternalFaceNeighbors(vertex2, vertex1, vertex3);
+    embedding.setExternalFaceNeighbors(vertex3, vertex2, vertex0);
+
+    const int edgeCountBefore = embedding.embeddedEdgeCount();
+
+    embedding.shortcutExternalFacePath(vertex0, 0, vertex2, 0);
+
+    BM_ASSERT(embedding.embeddedEdgeCount() == edgeCountBefore);
+    BM_ASSERT(embedding.externalFaceNeighbor(vertex0, 0) == vertex2);
+    BM_ASSERT(embedding.externalFaceNeighbor(vertex2, 0) == vertex0);
+
+    BmExternalFaceTraversal traversal(embedding);
+
+    BmExternalFacePosition start;
+    start.internalVertexId = vertex0;
+    start.linkIndex = 1;
+
+    const BmExternalFacePosition afterShortcut = traversal.successor(start);
+
+    BM_ASSERT(afterShortcut.internalVertexId == vertex2);
+    BM_ASSERT(afterShortcut.linkIndex == 0);
 }

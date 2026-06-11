@@ -19,6 +19,7 @@ add_library(bm_planarity
     src/BmWalkup.cpp
     src/BmEmbeddingOperations.cpp
     src/BmWalkdown.cpp
+    src/BmEmbeddingValidator.cpp
 )
 
 target_include_directories(bm_planarity
@@ -40,6 +41,7 @@ add_executable(bm_planarity_tests
     tests/BmWalkupTest.cpp
     tests/BmEmbeddingOperationsTest.cpp
     tests/BmWalkdownTest.cpp
+    tests/BmEmbeddingValidatorTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
@@ -58,3 +60,38 @@ add_test(
     NAME bm_planarity_tests
     COMMAND bm_planarity_tests
 )
+# Batch CLI used by differential regression and later benchmarking tools.
+add_executable(bm_planarity_decision_cli
+    tools/BmDecisionCli.cpp
+)
+
+target_link_libraries(bm_planarity_decision_cli
+    PRIVATE
+        bm_planarity
+)
+
+option(
+    BM_ENABLE_DIFFERENTIAL_TESTS
+    "Enable the optional NetworkX-based differential regression CTest"
+    OFF
+)
+
+if(BM_ENABLE_DIFFERENTIAL_TESTS)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+    add_test(
+        NAME bm_differential_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/differential_regression.py
+            --cli $<TARGET_FILE:bm_planarity_decision_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_differential_regression_quick
+        PROPERTIES
+            LABELS "differential"
+            TIMEOUT 120
+    )
+endif()

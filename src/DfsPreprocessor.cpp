@@ -1,6 +1,8 @@
 #include "bm/DfsPreprocessor.hpp"
 
+#include <cstddef>
 #include <stdexcept>
+#include <vector>
 
 namespace bm {
 
@@ -53,40 +55,69 @@ void DfsPreprocessor::initialize() {
     nextComponentId_ = 0;
 }
 
-void DfsPreprocessor::dfs(int v, int componentId) {
-    info_.dfsIndex[v] = nextDfsIndex_;
-    info_.vertexAtDfsIndex[nextDfsIndex_] = v;
-    ++nextDfsIndex_;
-
-    info_.componentId[v] = componentId;
-
-    info_.leastAncestorDfi[v] = info_.dfsIndex[v];
-    info_.leastAncestorVertex[v] = v;
-    info_.leastAncestorEdgeId[v] = -1;
-
-    info_.lowpointDfi[v] = info_.dfsIndex[v];
-    info_.lowpointVertex[v] = v;
+void DfsPreprocessor::dfs(int startVertex, int componentId) {
+    struct DfsFrame {
+        int vertex = -1;
+        std::size_t nextAdjacencyIndex = 0;
+    };
 
     const auto& adjacency = graph_->adjacencyEdgeIds();
 
-    for (int edgeId : adjacency[v]) {
-        const int w = graph_ -> opposite(edgeId, v);
+    auto discoverVertex = [&](int vertex) {
+        info_.dfsIndex[vertex] = nextDfsIndex_;
+        info_.vertexAtDfsIndex[nextDfsIndex_] = vertex;
+        ++nextDfsIndex_;
 
-        if (info_.dfsIndex[w] == -1) {
-            info_.parent[w] = v;
-            info_.parentEdgeId[w] = edgeId;
-            info_.children[v].push_back(w);
+        info_.componentId[vertex] = componentId;
+
+        info_.leastAncestorDfi[vertex] = info_.dfsIndex[vertex];
+        info_.leastAncestorVertex[vertex] = vertex;
+        info_.leastAncestorEdgeId[vertex] = -1;
+
+        info_.lowpointDfi[vertex] = info_.dfsIndex[vertex];
+        info_.lowpointVertex[vertex] = vertex;
+    };
+
+    std::vector<DfsFrame> stack;
+
+    discoverVertex(startVertex);
+    stack.push_back({startVertex, 0});
+
+    while (!stack.empty()) {
+        DfsFrame& frame = stack.back();
+        const int vertex = frame.vertex;
+
+        if (frame.nextAdjacencyIndex >= adjacency[vertex].size()) {
+            stack.pop_back();
+
+            const int parent = info_.parent[vertex];
+
+            if (parent != -1) {
+                updateLowpoint(parent, info_.lowpointDfi[vertex], info_.lowpointVertex[vertex]);
+            }
+
+            continue;
+        }
+
+        const int edgeId = adjacency[vertex][frame.nextAdjacencyIndex];
+        ++frame.nextAdjacencyIndex;
+
+        const int neighbor = graph_->opposite(edgeId, vertex);
+
+        if (info_.dfsIndex[neighbor] == -1) {
+            info_.parent[neighbor] = vertex;
+            info_.parentEdgeId[neighbor] = edgeId;
+            info_.children[vertex].push_back(neighbor);
             info_.treeEdgeIds.push_back(edgeId);
 
-            dfs(w, componentId);
-
-            updateLowpoint(v, info_.lowpointDfi[w], info_.lowpointVertex[w]);
-        } else if (edgeId != info_.parentEdgeId[v] && info_.dfsIndex[w] < info_.dfsIndex[v]) {
-            // undirected non-tree edge is stored once;
-            // from deeper vertex v to ancestor w
-            registerBackEdge(edgeId, w, v);
-            updateLeastAncestor(v, w, edgeId);
-            updateLowpoint(v, info_.dfsIndex[w], w);
+            discoverVertex(neighbor);
+            stack.push_back({neighbor, 0});
+        } else if (edgeId != info_.parentEdgeId[vertex] &&
+                   info_.dfsIndex[neighbor] < info_.dfsIndex[vertex]) {
+            // Undirected non-tree edge is stored once, from descendant to ancestor.
+            registerBackEdge(edgeId, neighbor, vertex);
+            updateLeastAncestor(vertex, neighbor, edgeId);
+            updateLowpoint(vertex, info_.dfsIndex[neighbor], neighbor);
         }
     }
 }

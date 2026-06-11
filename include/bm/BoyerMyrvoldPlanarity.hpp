@@ -12,7 +12,6 @@ public:
     PlanarityResult run(const Graph& graph) const;
 
 private:
-    static void createInitialTreeBicomps(const DfsInfo& dfsInfo, BmEmbeddingState& state);
 
     static PlanarityResult makePlaceholderPlanarResult(const Graph& graph);
     static PlanarityResult makePlaceholderNonPlanarResult();

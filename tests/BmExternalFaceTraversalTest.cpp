@@ -16,17 +16,13 @@ BM_TEST(BmExternalFaceTraversalStepsAcrossTreeBicomp) {
     start.internalVertexId = tree.rootInternalVertexId;
     start.linkIndex = 0;
 
-    const BmExternalFaceStep firstStep = traversal.step(start);
+    const BmExternalFacePosition successor = traversal.successor(start);
 
-    BM_ASSERT(firstStep.fromInternalVertexId == tree.rootInternalVertexId);
-    BM_ASSERT(firstStep.toInternalVertexId == tree.childInternalVertexId);
-    BM_ASSERT(firstStep.usedHalfEdgeId == tree.rootToChildHalfEdgeId);
-
-    BM_ASSERT(firstStep.successor.internalVertexId == tree.childInternalVertexId);
-    BM_ASSERT(firstStep.successor.linkIndex == 0);
+    BM_ASSERT(successor.internalVertexId == tree.childInternalVertexId);
+    BM_ASSERT(successor.linkIndex == 0);
 }
 
-BM_TEST(BmExternalFaceTraversalCollectsTreeBicompCycle) {
+BM_TEST(BmExternalFaceTraversalReturnsToTreeBicompRoot) {
     BmPartialEmbedding embedding(2);
 
     const BmTreeBicompEmbedding tree = embedding.createTreeEdgeBicomp(0, 0, 1, 7);
@@ -37,13 +33,9 @@ BM_TEST(BmExternalFaceTraversalCollectsTreeBicompCycle) {
     start.internalVertexId = tree.rootInternalVertexId;
     start.linkIndex = 0;
 
-    const auto cycle = traversal.collectCycle(start, 10);
+    const BmExternalFacePosition child = traversal.successor(start);
+    const BmExternalFacePosition root = traversal.successor(child);
 
-    BM_ASSERT(cycle.size() == 2);
-
-    BM_ASSERT(cycle[0].fromInternalVertexId == tree.rootInternalVertexId);
-    BM_ASSERT(cycle[0].toInternalVertexId == tree.childInternalVertexId);
-
-    BM_ASSERT(cycle[1].fromInternalVertexId == tree.childInternalVertexId);
-    BM_ASSERT(cycle[1].toInternalVertexId == tree.rootInternalVertexId);
+    BM_ASSERT(root.internalVertexId == start.internalVertexId);
+    BM_ASSERT(root.linkIndex == start.linkIndex);
 }

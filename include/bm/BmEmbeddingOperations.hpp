@@ -30,8 +30,9 @@ public:
     static int embedBackEdge(BmEmbeddingState& state, int rootId, int rootOutgoingLink,
                              int descendantVertex, int descendantIncomingLink, int currentVertex);
 
-    static int embedShortCircuitEdge(BmEmbeddingState& state, int rootId, int rootOutgoingLink,
-                                     int stoppingVertex, int stoppingVertexIncomingLink);
+    static void installExternalFaceShortcut(BmEmbeddingState& state, int rootId,
+                                            int rootOutgoingLink, int stoppingVertex,
+                                            int stoppingVertexIncomingLink);
 };
 
 } // namespace bm

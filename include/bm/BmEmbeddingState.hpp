@@ -75,7 +75,6 @@ public:
     BmBicompRoot& bicompRoot(int rootId);
 
     int rootForChild(int childVertex) const;
-    const std::vector<int>& childRoots(int vertex) const;
 
     bool hasBackedgeFlag(int vertex, int currentVertex) const;
     void markBackedgeFlag(int vertex, int currentVertex);
@@ -93,7 +92,6 @@ public:
 
     bool hasPertinentRoots(int vertex) const;
     int firstPertinentRoot(int vertex) const;
-    void removeFirstPertinentRoot(int vertex);
 
     bool isInternalBicompRootVertex(int internalVertexId) const;
     int bicompRootIdForInternalVertex(int internalVertexId) const;
@@ -132,8 +130,6 @@ private:
     // DFS child c -> root id for virtual root parent^c.
     std::vector<int> rootForChild_;
 
-    // Non-virtual vertex v -> roots v^c of its child biconnected components.
-    std::vector<std::vector<int>> childRoots_;
 
     std::vector<int> internalVertexVisitedInStep_;
 

@@ -7,7 +7,7 @@ namespace bm {
 BmEmbeddingState::BmEmbeddingState(const Graph& graph, const DfsInfo& dfsInfo)
     : graph_(&graph), dfsInfo_(&dfsInfo), vertexStates_(graph.vertexCount()),
       separatedDfsChildLists_(dfsInfo), partialEmbedding_(graph.vertexCount()),
-      rootForChild_(graph.vertexCount(), -1), childRoots_(graph.vertexCount()),
+      rootForChild_(graph.vertexCount(), -1),
       internalVertexVisitedInStep_(graph.vertexCount(), -1),
       embeddedEdgeIdByOriginalEdge_(graph.edgeCount(), -1),
       pendingBackedgeOriginalEdgeId_(graph.vertexCount(), -1) {
@@ -115,8 +115,6 @@ int BmEmbeddingState::createTreeEdgeBicomp(int parentVertex, int childVertex) {
     bicompRoots_.push_back(root);
 
     existingRoot = root.id;
-    childRoots_[parentVertex].push_back(root.id);
-
     return root.id;
 }
 
@@ -166,10 +164,6 @@ int BmEmbeddingState::rootForChild(int childVertex) const {
     return rootForChild_[childVertex];
 }
 
-const std::vector<int>& BmEmbeddingState::childRoots(int vertex) const {
-    validateVertex(vertex);
-    return childRoots_[vertex];
-}
 
 bool BmEmbeddingState::hasBackedgeFlag(int vertex, int currentVertex) const {
     validateVertex(vertex);
@@ -269,16 +263,6 @@ int BmEmbeddingState::firstPertinentRoot(int vertex) const {
     return roots.front();
 }
 
-void BmEmbeddingState::removeFirstPertinentRoot(int vertex) {
-    validateVertex(vertex);
-
-    auto& roots = vertexStates_[vertex].pertinentRoots;
-
-    if (roots.empty())
-        throw std::logic_error("Vertex has no pertinent roots.");
-
-    roots.pop_front();
-}
 
 bool BmEmbeddingState::isInternalBicompRootVertex(int internalVertexId) const {
     return partialEmbedding_.isBicompRootVertex(internalVertexId);

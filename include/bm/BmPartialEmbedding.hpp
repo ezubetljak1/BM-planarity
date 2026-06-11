@@ -40,11 +40,8 @@ struct BmEmbeddedEdge {
     int halfEdgeA = -1;
     int halfEdgeB = -1;
 
-    bool shortCircuit = false;
-
-    // Used for lazy flip recovery
+    // Used for lazy flip recovery.
     int sign = 1;
-    bool active = true;
 };
 
 struct BmHalfEdge {
@@ -55,10 +52,6 @@ struct BmHalfEdge {
     int to = -1;
 
     int twin = -1;
-
-    // circular external-face traversal links
-    int nextOnExternalFace = -1;
-    int previousOnExternalFace = -1;
 
     // circular adjacency-list links around from
     int nextAroundVertex = -1;
@@ -97,16 +90,9 @@ public:
     BmTreeBicompEmbedding createTreeEdgeBicomp(int bicompRootId, int parentVertex, int childVertex,
                                                int originalTreeEdgeId);
 
-    // debug/test helper; do not use this in Walkup/Walkdown hot loops later
-    std::vector<int> externalFaceVertices(int startHalfEdgeId, int maxSteps) const;
-
-    int nextOnExternalFace(int halfEdgeId) const;
-    int previousOnExternalFace(int halfEdgeId) const;
     int twinHalfEdge(int halfEdgeId) const;
 
     int externalFaceHalfEdge(int internalVertexId, int side) const;
-    int externalFaceLinkIndex(int internalVertexId, int halfEdgeId) const;
-    int oppositeExternalFaceHalfEdge(int internalVertexId, int halfEdgeId) const;
 
     bool isBicompRootVertex(int internalVertexId) const;
     int bicompRootIdForInternalVertex(int internalVertexId) const;
@@ -114,10 +100,8 @@ public:
 
     void setExternalFaceHalfEdges(int internalVertexId, int firstHalfEdgeId, int secondHalfEdgeId);
 
-    void linkExternalFaceHalfEdges(int fromHalfEdgeId, int toHalfEdgeId);
 
-    int addEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId, int originalEdgeId,
-                        bool shortCircuit);
+    int addEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId, int originalEdgeId);
     void insertHalfEdgeIntoAdjacency(int internalVertexId, int halfEdgeId);
     void redirectHalfEdgeEndpoint(int halfEdgeId, int newInternalVertexId);
     void redirectAdjacencyToVertex(int sourceInternalVertexId, int targetInternalVertexId);
@@ -134,12 +118,10 @@ public:
     int previousAroundVertex(int halfEdgeId) const;
 
     int addExternalFaceEdge(int firstInternalVertexId, int firstLinkIndex,
-                            int secondInternalVertexId, int secondLinkIndex, int originalEdgeId,
-                            bool shortCircuit);
+                            int secondInternalVertexId, int secondLinkIndex, int originalEdgeId);
 
     int externalFaceNeighbor(int internalVertexId, int side) const;
 
-    int externalFaceNeighborLinkIndex(int internalVertexId, int neighborInternalVertexId) const;
 
     void setExternalFaceNeighbors(int internalVertexId, int firstNeighborId, int secondNeighborId);
 
@@ -162,7 +144,7 @@ private:
     void validateHalfEdge(int halfEdgeId) const;
 
     int createDetachedEmbeddedEdge(int fromInternalVertexId, int toInternalVertexId,
-                                   int originalEdgeId, bool shortCircuit);
+                                   int originalEdgeId);
 
     void insertHalfEdgeAtExternalFaceSide(int internalVertexId, int halfEdgeId, int linkIndex);
 
