@@ -14,10 +14,7 @@ int validateVertexCount(int vertexCount) {
 namespace bm {
 
 Graph::Graph(int vertexCount)
-    : vertexCount_(validateVertexCount(vertexCount)), adjacencyEdgeIds_(vertexCount_) {
-    if (vertexCount < 0)
-        throw std::invalid_argument("Vertex count cannot be negative.");
-}
+    : vertexCount_(validateVertexCount(vertexCount)), adjacencyEdgeIds_(vertexCount_) {}
 
 int Graph::addEdge(int u, int v) {
     validateVertex(u);

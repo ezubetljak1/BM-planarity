@@ -132,8 +132,8 @@ BmWalkdownResult BmWalkdown::run(BmEmbeddingState& state, int currentVertex, int
             // The vertex is externally active and non-pertinent:
             // it is a stopping vertex.
             if (state.dfsInfo().lowpointDfi[child] < currentDfi && mergeStack.empty()) {
-                BmEmbeddingOperations::embedShortCircuitEdge(state, rootId, rootOutgoingLink,
-                                                             vertex, position.linkIndex);
+                BmEmbeddingOperations::installExternalFaceShortcut(
+                    state, rootId, rootOutgoingLink, vertex, position.linkIndex);
             }
 
             break;
@@ -151,9 +151,6 @@ bool BmWalkdown::isRootPosition(const BmEmbeddingState& state, BmExternalFacePos
     return state.isInternalBicompRootVertex(position.internalVertexId);
 }
 
-bool BmWalkdown::isSameInternalVertex(BmExternalFacePosition first, BmExternalFacePosition second) {
-    return first.internalVertexId == second.internalVertexId;
-}
 
 bool BmWalkdown::isInternallyActivePosition(const BmEmbeddingState& state,
                                             BmExternalFacePosition position, int currentVertex) {

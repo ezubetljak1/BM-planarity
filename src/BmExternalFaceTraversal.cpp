@@ -41,50 +41,6 @@ BmExternalFacePosition BmExternalFaceTraversal::successor(BmExternalFacePosition
     return result;
 }
 
-BmExternalFaceStep BmExternalFaceTraversal::step(BmExternalFacePosition position) const {
-    validatePosition(position);
-
-    const int outgoingHalfEdge =
-        embedding_->externalFaceHalfEdge(position.internalVertexId, 1 - position.linkIndex);
-
-    const BmHalfEdge& halfEdge = embedding_->halfEdge(outgoingHalfEdge);
-
-    BmExternalFaceStep result;
-    result.fromInternalVertexId = halfEdge.from;
-    result.toInternalVertexId = halfEdge.to;
-    result.usedHalfEdgeId = outgoingHalfEdge;
-    result.successor = successor(position);
-
-    return result;
-}
-
-std::vector<BmExternalFaceStep> BmExternalFaceTraversal::collectCycle(BmExternalFacePosition start,
-                                                                      int maxSteps) const {
-    validatePosition(start);
-
-    if (maxSteps < 0) {
-        throw std::invalid_argument("Maximum number of steps cannot be negative.");
-    }
-
-    std::vector<BmExternalFaceStep> result;
-
-    BmExternalFacePosition current = start;
-
-    for (int stepIndex = 0; stepIndex < maxSteps; ++stepIndex) {
-        BmExternalFaceStep currentStep = step(current);
-
-        result.push_back(currentStep);
-
-        current = currentStep.successor;
-
-        if (current.internalVertexId == start.internalVertexId &&
-            current.linkIndex == start.linkIndex) {
-            break;
-        }
-    }
-
-    return result;
-}
 
 void BmExternalFaceTraversal::validatePosition(BmExternalFacePosition position) const {
     if (position.internalVertexId < 0 ||

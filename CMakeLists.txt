@@ -19,6 +19,7 @@ add_library(bm_planarity
     src/BmWalkup.cpp
     src/BmEmbeddingOperations.cpp
     src/BmWalkdown.cpp
+    src/BmEmbeddingValidator.cpp
 )
 
 target_include_directories(bm_planarity
@@ -40,6 +41,7 @@ add_executable(bm_planarity_tests
     tests/BmWalkupTest.cpp
     tests/BmEmbeddingOperationsTest.cpp
     tests/BmWalkdownTest.cpp
+    tests/BmEmbeddingValidatorTest.cpp
 )
 
 target_include_directories(bm_planarity_tests

@@ -58,15 +58,6 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
     return makePlaceholderPlanarResult(graph);
 }
 
-void BoyerMyrvoldPlanarity::createInitialTreeBicomps(const DfsInfo& dfsInfo,
-                                                     BmEmbeddingState& state) {
-    for (int dfi = dfsInfo.vertexCount - 1; dfi >= 0; --dfi) {
-        const int vertex = dfsInfo.vertexAtDfsIndex[dfi];
-
-        for (int child : dfsInfo.children[vertex])
-            state.createTreeEdgeBicomp(vertex, child);
-    }
-}
 
 PlanarityResult BoyerMyrvoldPlanarity::makePlaceholderPlanarResult(const Graph& graph) {
     PlanarEmbedding embedding;

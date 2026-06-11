@@ -16,7 +16,6 @@ public:
 private:
     static bool isRootPosition(const BmEmbeddingState& state, BmExternalFacePosition position);
 
-    static bool isSameInternalVertex(BmExternalFacePosition first, BmExternalFacePosition second);
 
     static bool isInternallyActivePosition(const BmEmbeddingState& state,
                                            BmExternalFacePosition position, int currentVertex);

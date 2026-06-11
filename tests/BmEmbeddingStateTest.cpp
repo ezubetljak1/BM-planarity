@@ -167,11 +167,6 @@ BM_TEST(BmEmbeddingStateTreeBicompCreatesInternalEmbeddingObjects) {
 
     BM_ASSERT(embedding.embeddedEdge(root.embeddedTreeEdgeId).originalEdgeId == edge01);
 
-    const auto face = embedding.externalFaceVertices(root.rootToChildHalfEdgeId, 4);
-
-    BM_ASSERT(face.size() == 2);
-    BM_ASSERT(face[0] == root.internalRootVertexId);
-    BM_ASSERT(face[1] == root.internalChildVertexId);
 }
 
 BM_TEST(BmEmbeddingStateMarksBackedgeFlag) {
@@ -232,7 +227,7 @@ BM_TEST(BmEmbeddingStateAddsPertinentRoot) {
     BM_ASSERT(state.firstPertinentRoot(0) == rootId);
     BM_ASSERT(state.isPertinent(0, 0));
 
-    state.removeFirstPertinentRoot(0);
+    state.removeExpectedFirstPertinentRoot(0, rootId);
 
     BM_ASSERT(!state.hasPertinentRoots(0));
 }

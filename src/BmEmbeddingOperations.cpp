@@ -142,7 +142,7 @@ int BmEmbeddingOperations::embedBackEdge(BmEmbeddingState& state, int rootId, in
 
     const int embeddedEdgeId = embedding.addExternalFaceEdge(
         root.internalRootVertexId, rootOutgoingLink, descendantInternalVertexId,
-        descendantIncomingLink, originalEdgeId, false);
+        descendantIncomingLink, originalEdgeId);
 
     state.registerEmbeddedOriginalEdge(originalEdgeId, embeddedEdgeId);
 
@@ -151,9 +151,9 @@ int BmEmbeddingOperations::embedBackEdge(BmEmbeddingState& state, int rootId, in
     return embeddedEdgeId;
 }
 
-int BmEmbeddingOperations::embedShortCircuitEdge(BmEmbeddingState& state, int rootId,
-                                                 int rootOutgoingLink, int stoppingVertex,
-                                                 int stoppingVertexIncomingLink) {
+void BmEmbeddingOperations::installExternalFaceShortcut(BmEmbeddingState& state, int rootId,
+                                                          int rootOutgoingLink, int stoppingVertex,
+                                                          int stoppingVertexIncomingLink) {
     validateLinkIndex(rootOutgoingLink, "Root outgoing link");
 
     validateLinkIndex(stoppingVertexIncomingLink, "Stopping-vertex incoming link");
@@ -166,8 +166,6 @@ int BmEmbeddingOperations::embedShortCircuitEdge(BmEmbeddingState& state, int ro
 
     embedding.shortcutExternalFacePath(root.internalRootVertexId, rootOutgoingLink,
                                        stoppingInternalVertexId, stoppingVertexIncomingLink);
-
-    return -1;
 }
 
 } // namespace bm
