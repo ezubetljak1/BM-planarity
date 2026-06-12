@@ -440,4 +440,15 @@ if(BM_ENABLE_BENCHMARKS)
         PRIVATE
             bm_planarity
     )
+
+    add_executable(
+        bm_planarity_phase_benchmark
+        benchmarks/BmPlanarityPhaseBenchmark.cpp
+    )
+
+    target_link_libraries(
+        bm_planarity_phase_benchmark
+        PRIVATE
+            bm_planarity
+    )
 endif()

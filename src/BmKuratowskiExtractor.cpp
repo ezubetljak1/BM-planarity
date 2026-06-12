@@ -6,9 +6,11 @@
 #include "bm/KuratowskiCertificateVerifier.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <initializer_list>
 #include <optional>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace bm {
@@ -16,6 +18,13 @@ namespace bm {
 namespace {
 
 using Mark = BmKuratowskiObstructionMark;
+using Clock = std::chrono::steady_clock;
+
+std::int64_t elapsedNanoseconds(Clock::time_point started) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        Clock::now() - started
+    ).count();
+}
 
 BmOriginalBackEdgeConnection requireConnection(
     const std::optional<BmOriginalBackEdgeConnection>& connection,
@@ -201,12 +210,20 @@ void markCommonConnections(
 
 KuratowskiCertificate analyzeMarked(
     const BmEmbeddingState& state,
-    const BmKuratowskiPathMarker& marker
+    const BmKuratowskiPathMarker& marker,
+    BmKuratowskiExtractionTimings* timings
 ) {
-    return KuratowskiCertificateVerifier::analyze(
+    const auto started = Clock::now();
+    KuratowskiCertificate certificate = KuratowskiCertificateVerifier::analyze(
         state.graph(),
         marker.markedOriginalEdgeIds()
     );
+
+    if (timings != nullptr) {
+        timings->certificateVerificationNs += elapsedNanoseconds(started);
+    }
+
+    return certificate;
 }
 
 Mark obstructionMark(
@@ -225,23 +242,69 @@ KuratowskiCertificate BmKuratowskiExtractor::extract(
     const BmEmbeddingState& state,
     const BmWalkdownFailure& failure
 ) {
+    return extractWithTimings(state, failure, nullptr);
+}
+
+BmProfiledKuratowskiExtraction BmKuratowskiExtractor::extractProfiled(
+    const BmEmbeddingState& state,
+    const BmWalkdownFailure& failure
+) {
+    BmKuratowskiExtractionTimings timings;
+    KuratowskiCertificate certificate = extractWithTimings(state, failure, &timings);
+
+    return {
+        std::move(certificate),
+        timings
+    };
+}
+
+KuratowskiCertificate BmKuratowskiExtractor::extractWithTimings(
+    const BmEmbeddingState& state,
+    const BmWalkdownFailure& failure,
+    BmKuratowskiExtractionTimings* timings
+) {
+    const auto preparationStarted = Clock::now();
     BmPreparedKuratowskiIsolation prepared =
-        BmKuratowskiIsolationPreparation::prepare(state, failure);
+        BmKuratowskiIsolationPreparation::prepare(state, failure, timings);
+
+    if (timings != nullptr) {
+        timings->preparationNs += elapsedNanoseconds(preparationStarted);
+    }
+
+    const std::int64_t verificationBefore = timings != nullptr
+        ? timings->certificateVerificationNs
+        : 0;
+    const auto isolationStarted = Clock::now();
+
+    KuratowskiCertificate certificate;
 
     switch (prepared.minorType) {
     case BmKuratowskiMinorType::A:
-        return isolateMinorA(prepared.orientedState, prepared.context);
+        certificate = isolateMinorA(prepared.orientedState, prepared.context, timings);
+        break;
     case BmKuratowskiMinorType::B:
-        return isolateMinorB(prepared.orientedState, prepared.context);
+        certificate = isolateMinorB(prepared.orientedState, prepared.context, timings);
+        break;
     case BmKuratowskiMinorType::C:
-        return isolateMinorC(prepared.orientedState, prepared.context);
+        certificate = isolateMinorC(prepared.orientedState, prepared.context, timings);
+        break;
     case BmKuratowskiMinorType::D:
-        return isolateMinorD(prepared.orientedState, prepared.context);
+        certificate = isolateMinorD(prepared.orientedState, prepared.context, timings);
+        break;
     case BmKuratowskiMinorType::E:
-        return isolateMinorE(prepared.orientedState, prepared.context);
+        certificate = isolateMinorE(prepared.orientedState, prepared.context, timings);
+        break;
     default:
         throw std::logic_error("Kuratowski obstruction could not be classified as A-E.");
     }
+
+    if (timings != nullptr) {
+        const std::int64_t verificationElapsed =
+            timings->certificateVerificationNs - verificationBefore;
+        timings->isolationNs += elapsedNanoseconds(isolationStarted) - verificationElapsed;
+    }
+
+    return certificate;
 }
 
 KuratowskiCertificate BmKuratowskiExtractor::extractInitialMinor(
@@ -253,9 +316,9 @@ KuratowskiCertificate BmKuratowskiExtractor::extractInitialMinor(
 
     switch (BmKuratowskiMinorClassifier::classifyInitial(state, context)) {
     case BmKuratowskiMinorType::A:
-        return isolateMinorA(state, context);
+        return isolateMinorA(state, context, nullptr);
     case BmKuratowskiMinorType::B:
-        return isolateMinorB(state, context);
+        return isolateMinorB(state, context, nullptr);
     default:
         throw std::logic_error(
             "Kuratowski extraction requires the C-D-E internal X-Y path stage."
@@ -265,7 +328,8 @@ KuratowskiCertificate BmKuratowskiExtractor::extractInitialMinor(
 
 KuratowskiCertificate BmKuratowskiExtractor::isolateMinorA(
     const BmEmbeddingState& state,
-    const BmKuratowskiExtractionContext& context
+    const BmKuratowskiExtractionContext& context,
+    BmKuratowskiExtractionTimings* timings
 ) {
     const int x = originalVertex(state, context.x);
     const int y = originalVertex(state, context.y);
@@ -289,12 +353,13 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorA(
     marker.markDfsPath(w, connections.vDw.descendantVertex);
 
     markCommonConnections(connections, marker);
-    return analyzeMarked(state, marker);
+    return analyzeMarked(state, marker, timings);
 }
 
 KuratowskiCertificate BmKuratowskiExtractor::isolateMinorB(
     const BmEmbeddingState& state,
-    const BmKuratowskiExtractionContext& context
+    const BmKuratowskiExtractionContext& context,
+    BmKuratowskiExtractionTimings* timings
 ) {
     const int x = originalVertex(state, context.x);
     const int y = originalVertex(state, context.y);
@@ -349,12 +414,13 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorB(
     markConnection(marker, uyDy);
     markConnection(marker, vDw);
     markConnection(marker, uzDz);
-    return analyzeMarked(state, marker);
+    return analyzeMarked(state, marker, timings);
 }
 
 KuratowskiCertificate BmKuratowskiExtractor::isolateMinorC(
     const BmEmbeddingState& state,
-    const BmKuratowskiExtractionContext& context
+    const BmKuratowskiExtractionContext& context,
+    BmKuratowskiExtractionTimings* timings
 ) {
     const int x = originalVertex(state, context.x);
     const int y = originalVertex(state, context.y);
@@ -383,12 +449,13 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorC(
     );
     markCommonConnections(connections, marker);
 
-    return analyzeMarked(state, marker);
+    return analyzeMarked(state, marker, timings);
 }
 
 KuratowskiCertificate BmKuratowskiExtractor::isolateMinorD(
     const BmEmbeddingState& state,
-    const BmKuratowskiExtractionContext& context
+    const BmKuratowskiExtractionContext& context,
+    BmKuratowskiExtractionTimings* timings
 ) {
     const int x = originalVertex(state, context.x);
     const int y = originalVertex(state, context.y);
@@ -409,12 +476,13 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorD(
     markCommonDescendantPaths(state, context, connections, marker);
     markCommonConnections(connections, marker);
 
-    return analyzeMarked(state, marker);
+    return analyzeMarked(state, marker, timings);
 }
 
 KuratowskiCertificate BmKuratowskiExtractor::isolateMinorE(
     const BmEmbeddingState& state,
-    const BmKuratowskiExtractionContext& context
+    const BmKuratowskiExtractionContext& context,
+    BmKuratowskiExtractionTimings* timings
 ) {
     const DfsInfo& dfsInfo = state.dfsInfo();
     const int x = originalVertex(state, context.x);
@@ -448,7 +516,7 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorE(
             throw std::logic_error("Minor E1 requires Z on a low external-face segment.");
         }
 
-        return isolateMinorC(state, reduced);
+        return isolateMinorC(state, reduced, timings);
     }
 
     const int maxUxy = vertexWithHighestDfi(
@@ -475,7 +543,7 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorE(
         markConnection(reducedMarker, connections.uxDx);
         markConnection(reducedMarker, connections.uyDy);
         markConnection(reducedMarker, uzDz);
-        return analyzeMarked(state, reducedMarker);
+        return analyzeMarked(state, reducedMarker, timings);
     }
 
     BmKuratowskiPathMarker marker(state);
@@ -526,7 +594,7 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorE(
     markCommonConnections(connections, marker);
     markConnection(marker, uzDz);
 
-    return analyzeMarked(state, marker);
+    return analyzeMarked(state, marker, timings);
 }
 
 } // namespace bm

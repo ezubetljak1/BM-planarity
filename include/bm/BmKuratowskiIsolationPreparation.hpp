@@ -3,6 +3,7 @@
 #include "bm/BmEmbeddingState.hpp"
 #include "bm/BmKuratowskiExtractionContext.hpp"
 #include "bm/BmKuratowskiMinorClassifier.hpp"
+#include "bm/BmPlanarityProfiling.hpp"
 #include "bm/BmWalkdown.hpp"
 
 namespace bm {
@@ -19,7 +20,8 @@ public:
     // traversal without mutating the decision-core failure snapshot.
     static BmPreparedKuratowskiIsolation prepare(
         const BmEmbeddingState& state,
-        const BmWalkdownFailure& failure
+        const BmWalkdownFailure& failure,
+        BmKuratowskiExtractionTimings* timings = nullptr
     );
 };
 

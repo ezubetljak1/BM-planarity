@@ -308,3 +308,46 @@ BM_TEST(BoyerMyrvoldReturnsVerifiedCertificateForDenseSimpleGraph) {
 
     KuratowskiCertificateVerifier::validate(graph, *result.certificate);
 }
+
+BM_TEST(BoyerMyrvoldProfiledRunMatchesRegularDecisionForSubdividedK5) {
+    Graph graph(100);
+
+    static const std::vector<std::pair<int, int>> baseEdges = {
+        {0, 1}, {0, 2}, {0, 3}, {0, 4},
+        {1, 2}, {1, 3}, {1, 4},
+        {2, 3}, {2, 4},
+        {3, 4}
+    };
+
+    int nextVertex = 5;
+    const int extraVertices = graph.vertexCount() - 5;
+    const int quotient = extraVertices / static_cast<int>(baseEdges.size());
+    const int remainder = extraVertices % static_cast<int>(baseEdges.size());
+
+    for (std::size_t index = 0; index < baseEdges.size(); ++index) {
+        const auto [source, target] = baseEdges[index];
+        const int subdivisions = quotient + (static_cast<int>(index) < remainder ? 1 : 0);
+
+        int previous = source;
+        for (int subdivision = 0; subdivision < subdivisions; ++subdivision) {
+            graph.addEdge(previous, nextVertex);
+            previous = nextVertex;
+            ++nextVertex;
+        }
+        graph.addEdge(previous, target);
+    }
+
+    BoyerMyrvoldPlanarity algorithm;
+    const PlanarityResult regular = algorithm.run(graph);
+    const BmProfiledPlanarityResult profiled = algorithm.runProfiled(graph);
+
+    BM_ASSERT(regular.planar == profiled.result.planar);
+    BM_ASSERT(!profiled.result.planar);
+    BM_ASSERT(profiled.result.certificate.has_value());
+    BM_ASSERT(profiled.timings.totalNs > 0);
+    BM_ASSERT(profiled.timings.dfsPreprocessingNs >= 0);
+    BM_ASSERT(profiled.timings.decisionCoreNs >= 0);
+    BM_ASSERT(profiled.timings.kuratowskiPreparationNs >= 0);
+    BM_ASSERT(profiled.timings.kuratowskiMinorClassificationNs >= 0);
+    BM_ASSERT(profiled.timings.certificateVerificationNs >= 0);
+}

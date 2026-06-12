@@ -2,6 +2,7 @@
 
 #include "bm/BmEmbeddingState.hpp"
 #include "bm/BmKuratowskiExtractionContext.hpp"
+#include "bm/BmPlanarityProfiling.hpp"
 
 namespace bm {
 
@@ -29,7 +30,8 @@ public:
     // P_x, P_y, the highest X-Y path and, where applicable, Z.
     static BmKuratowskiMinorType classifyComplete(
         const BmEmbeddingState& state,
-        BmKuratowskiExtractionContext& context
+        BmKuratowskiExtractionContext& context,
+        BmKuratowskiExtractionTimings* timings = nullptr
     );
 };
 

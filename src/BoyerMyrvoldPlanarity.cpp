@@ -8,14 +8,87 @@
 #include "bm/BmWalkup.hpp"
 #include "bm/SimpleGraphValidator.hpp"
 
+#include <chrono>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
 namespace bm {
 
+namespace {
+
+using Clock = std::chrono::steady_clock;
+
+std::int64_t elapsedNanoseconds(Clock::time_point started) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        Clock::now() - started
+    ).count();
+}
+
+void addElapsed(
+    BmPlanarityPhaseTimings* timings,
+    std::int64_t BmPlanarityPhaseTimings::* field,
+    Clock::time_point started
+) {
+    if (timings != nullptr) {
+        timings->*field += elapsedNanoseconds(started);
+    }
+}
+
+KuratowskiCertificate extractCertificate(
+    const BmEmbeddingState& state,
+    const BmWalkdownFailure& failure,
+    BmPlanarityPhaseTimings* timings
+) {
+    if (timings == nullptr) {
+        return BmKuratowskiExtractor::extract(state, failure);
+    }
+
+    BmProfiledKuratowskiExtraction profiled =
+        BmKuratowskiExtractor::extractProfiled(state, failure);
+
+    timings->kuratowskiPreparationNs += profiled.timings.preparationNs;
+    timings->kuratowskiOrientedStateCopyNs += profiled.timings.orientedStateCopyNs;
+    timings->kuratowskiOrientationNs += profiled.timings.orientationNs;
+    timings->kuratowskiContextInitializationNs += profiled.timings.contextInitializationNs;
+    timings->kuratowskiMinorClassificationNs += profiled.timings.minorClassificationNs;
+    timings->kuratowskiClassifyInitialNs += profiled.timings.classifyInitialNs;
+    timings->kuratowskiClassifyExternalFaceVerticesNs += profiled.timings.classifyExternalFaceVerticesNs;
+    timings->kuratowskiFindHighestXyPathNs += profiled.timings.findHighestXyPathNs;
+    timings->kuratowskiFindZToRootPathNs += profiled.timings.findZToRootPathNs;
+    timings->kuratowskiFindFuturePertinentBelowXyPathNs += profiled.timings.findFuturePertinentBelowXyPathNs;
+    timings->kuratowskiIsolationNs += profiled.timings.isolationNs;
+    timings->certificateVerificationNs += profiled.timings.certificateVerificationNs;
+
+    return std::move(profiled.certificate);
+}
+
+} // namespace
+
 PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
+    return runInternal(graph, nullptr);
+}
+
+BmProfiledPlanarityResult BoyerMyrvoldPlanarity::runProfiled(const Graph& graph) const {
+    BmPlanarityPhaseTimings timings;
+    const auto totalStarted = Clock::now();
+
+    PlanarityResult result = runInternal(graph, &timings);
+    timings.totalNs = elapsedNanoseconds(totalStarted);
+
+    return {
+        std::move(result),
+        timings
+    };
+}
+
+PlanarityResult BoyerMyrvoldPlanarity::runInternal(
+    const Graph& graph,
+    BmPlanarityPhaseTimings* timings
+) const {
+    const auto validationStarted = Clock::now();
     SimpleGraphValidator::validate(graph);
+    addElapsed(timings, &BmPlanarityPhaseTimings::validationNs, validationStarted);
 
     // A simple planar graph with n >= 3 has at most 3n - 6 edges. For a
     // denser input, any 3n - 5-edge subgraph is already non-planar. Run the
@@ -26,6 +99,7 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
             3LL * static_cast<long long>(graph.vertexCount()) - 5LL;
 
         if (static_cast<long long>(graph.edgeCount()) > sparseCertificateEdgeLimit) {
+            const auto sparseConstructionStarted = Clock::now();
             const int sparseEdgeCount = static_cast<int>(sparseCertificateEdgeLimit);
             Graph sparseGraph(graph.vertexCount());
             std::vector<int> originalEdgeIdBySparseEdge;
@@ -45,8 +119,13 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
 
                 originalEdgeIdBySparseEdge.push_back(originalEdgeId);
             }
+            addElapsed(
+                timings,
+                &BmPlanarityPhaseTimings::denseShortcutOverheadNs,
+                sparseConstructionStarted
+            );
 
-            PlanarityResult sparseResult = run(sparseGraph);
+            PlanarityResult sparseResult = runInternal(sparseGraph, timings);
 
             if (sparseResult.planar || !sparseResult.certificate.has_value()) {
                 throw std::logic_error(
@@ -54,6 +133,7 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
                 );
             }
 
+            const auto mappingStarted = Clock::now();
             std::vector<int> mappedEdgeIds;
             mappedEdgeIds.reserve(sparseResult.certificate->edgeIds.size());
 
@@ -62,20 +142,45 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
                     originalEdgeIdBySparseEdge.at(static_cast<std::size_t>(sparseEdgeId))
                 );
             }
-
-            return makeNonPlanarResult(
-                KuratowskiCertificateVerifier::analyze(graph, mappedEdgeIds)
+            addElapsed(
+                timings,
+                &BmPlanarityPhaseTimings::denseShortcutOverheadNs,
+                mappingStarted
             );
+
+            const auto verificationStarted = Clock::now();
+            KuratowskiCertificate certificate =
+                KuratowskiCertificateVerifier::analyze(graph, mappedEdgeIds);
+            addElapsed(
+                timings,
+                &BmPlanarityPhaseTimings::certificateVerificationNs,
+                verificationStarted
+            );
+
+            return makeNonPlanarResult(std::move(certificate));
         }
     }
 
+    const auto preprocessingStarted = Clock::now();
     DfsPreprocessor dfsPreprocessor;
     const DfsInfo dfsInfo = dfsPreprocessor.run(graph);
+    addElapsed(
+        timings,
+        &BmPlanarityPhaseTimings::dfsPreprocessingNs,
+        preprocessingStarted
+    );
 
+    const auto stateInitializationStarted = Clock::now();
     BmEmbeddingState state(graph, dfsInfo);
+    addElapsed(
+        timings,
+        &BmPlanarityPhaseTimings::stateInitializationNs,
+        stateInitializationStarted
+    );
 
     BmWalkup walkup;
     BmWalkdown walkdown;
+    const auto decisionStarted = Clock::now();
 
     for (int dfi = dfsInfo.vertexCount - 1; dfi >= 0; --dfi) {
         const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(dfi)];
@@ -104,12 +209,18 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
             );
 
             if (!result.completed) {
+                addElapsed(
+                    timings,
+                    &BmPlanarityPhaseTimings::decisionCoreNs,
+                    decisionStarted
+                );
+
                 if (!result.failure.has_value()) {
                     throw std::logic_error("Walkdown failure has no Kuratowski extraction context.");
                 }
 
                 return makeNonPlanarResult(
-                    BmKuratowskiExtractor::extract(state, *result.failure)
+                    extractCertificate(state, *result.failure, timings)
                 );
             }
         }
@@ -120,21 +231,47 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
                 dfsInfo.backEdges[static_cast<std::size_t>(backEdgeIndex)];
 
             if (!state.isOriginalEdgeEmbedded(backEdge.edgeId)) {
-                return makeNonPlanarResult(
-                    BmKuratowskiExtractor::extract(
+                addElapsed(
+                    timings,
+                    &BmPlanarityPhaseTimings::decisionCoreNs,
+                    decisionStarted
+                );
+
+                const auto failureFactoryStarted = Clock::now();
+                BmWalkdownFailure failure =
+                    BmKuratowskiFailureFactory::fromUnembeddedBackedge(
                         state,
-                        BmKuratowskiFailureFactory::fromUnembeddedBackedge(
-                            state,
-                            vertex,
-                            backEdge
-                        )
-                    )
+                        vertex,
+                        backEdge
+                    );
+                addElapsed(
+                    timings,
+                    &BmPlanarityPhaseTimings::failureFactoryNs,
+                    failureFactoryStarted
+                );
+
+                return makeNonPlanarResult(
+                    extractCertificate(state, failure, timings)
                 );
             }
         }
     }
 
-    return makePlanarResult(BmEmbeddingRecovery::recover(state));
+    addElapsed(
+        timings,
+        &BmPlanarityPhaseTimings::decisionCoreNs,
+        decisionStarted
+    );
+
+    const auto recoveryStarted = Clock::now();
+    PlanarEmbedding embedding = BmEmbeddingRecovery::recover(state);
+    addElapsed(
+        timings,
+        &BmPlanarityPhaseTimings::embeddingRecoveryNs,
+        recoveryStarted
+    );
+
+    return makePlanarResult(std::move(embedding));
 }
 
 PlanarityResult BoyerMyrvoldPlanarity::makePlanarResult(PlanarEmbedding embedding) {

@@ -32,6 +32,15 @@ struct BmKuratowskiExtractionContext {
     // Filled by the internal X-Y-path stage used for Minors C, D and E.
     std::vector<BmKuratowskiObstructionMark> obstructionMarksByInternalVertex;
 
+    // External-face positions cached while the two root-to-W sides are
+    // classified. Keeping one cache per side avoids rescanning a complete
+    // external-face prefix every time findHighestXyPath encounters another
+    // candidate attachment vertex.
+    std::vector<BmRealExternalFacePosition> rxwPositionByInternalVertex;
+    std::vector<BmRealExternalFacePosition> rywPositionByInternalVertex;
+    std::vector<bool> hasRxwPositionByInternalVertex;
+    std::vector<bool> hasRywPositionByInternalVertex;
+
     int px = -1;
     int py = -1;
     BmRealExternalFacePosition pxPosition;
