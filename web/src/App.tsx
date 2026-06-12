@@ -44,6 +44,18 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] =
     useState<string | null>(null);
 
+  const [
+    isEdgeClickMode,
+    setIsEdgeClickMode
+  ] = useState(false);
+
+  const [
+    pendingEdgeSourceId,
+    setPendingEdgeSourceId
+  ] = useState<string | null>(
+    null
+  );
+
   const [analysis, setAnalysis] =
     useState<AnalysisSuccessResponse | null>(
       null
@@ -143,32 +155,35 @@ function App() {
     setAnalysis(null);
   }
 
-  function addEdge() {
-    if (!edgeSource || !edgeTarget) {
+  function appendEdge(
+    source: string,
+    target: string
+  ): boolean {
+    if (!source || !target) {
       setError(
         'Izaberite oba kraja grane.'
       );
 
-      return;
+      return false;
     }
 
-    if (edgeSource === edgeTarget) {
+    if (source === target) {
       setError(
         'Self-loop grane nisu podržane.'
       );
 
-      return;
+      return false;
     }
 
     const duplicateExists =
       edges.some(edge =>
         (
-          edge.source === edgeSource
-          && edge.target === edgeTarget
+          edge.source === source
+          && edge.target === target
         )
         || (
-          edge.source === edgeTarget
-          && edge.target === edgeSource
+          edge.source === target
+          && edge.target === source
         )
       );
 
@@ -177,13 +192,13 @@ function App() {
         'Paralelna grana već postoji.'
       );
 
-      return;
+      return false;
     }
 
     const edge: GraphEdge = {
       id: createNextEdgeId(),
-      source: edgeSource,
-      target: edgeTarget
+      source,
+      target
     };
 
     setEdges(current => [
@@ -193,6 +208,89 @@ function App() {
 
     setError('');
     setAnalysis(null);
+
+    return true;
+  }
+
+  function addEdge() {
+    if (
+      appendEdge(
+        edgeSource,
+        edgeTarget
+      )
+    ) {
+      setEdgeSource('');
+      setEdgeTarget('');
+    }
+  }
+
+  function handleCanvasNodeTap(
+  nodeId: string
+) {
+  if (!isEdgeClickMode) {
+    setSelectedNodeId(
+      nodeId
+    );
+
+    return;
+  }
+
+  if (!pendingEdgeSourceId) {
+    setPendingEdgeSourceId(
+      nodeId
+    );
+
+    setSelectedNodeId(
+      nodeId
+    );
+
+    setError('');
+
+    return;
+  }
+
+  if (
+    appendEdge(
+      pendingEdgeSourceId,
+      nodeId
+    )
+  ) {
+    setPendingEdgeSourceId(
+      null
+    );
+
+    setSelectedNodeId(
+      null
+    );
+  }
+}
+
+function handleCanvasTap() {
+    setSelectedNodeId(
+      null
+    );
+
+    if (isEdgeClickMode) {
+      setPendingEdgeSourceId(
+        null
+      );
+    }
+  }
+
+  function toggleEdgeClickMode() {
+    setIsEdgeClickMode(
+      current => !current
+    );
+
+    setPendingEdgeSourceId(
+      null
+    );
+
+    setSelectedNodeId(
+      null
+    );
+
+    setError('');
   }
 
   function removeVertex(
@@ -223,6 +321,15 @@ function App() {
 
     if (selectedNodeId === vertexId) {
       setSelectedNodeId(null);
+    }
+
+    if (
+      pendingEdgeSourceId
+      === vertexId
+    ) {
+      setPendingEdgeSourceId(
+        null
+      );
     }
 
     clearAnalysis();
@@ -261,6 +368,14 @@ function App() {
 
     setSelectedNodeId(null);
 
+    setIsEdgeClickMode(
+      false
+    );
+
+    setPendingEdgeSourceId(
+      null
+    );
+
     setAnalysis(null);
     setError('');
 
@@ -276,6 +391,14 @@ function App() {
     setEdgeTarget('');
 
     setSelectedNodeId(null);
+
+    setIsEdgeClickMode(
+      false
+    );
+
+    setPendingEdgeSourceId(
+      null
+    );
 
     setAnalysis(null);
     setError('');
@@ -436,6 +559,37 @@ function App() {
             >
               Dodaj granu
             </button>
+
+            <button
+              className={
+                isEdgeClickMode
+                  ? 'edge-mode-button active'
+                  : 'secondary-button edge-mode-button'
+              }
+              type="button"
+              onClick={
+                toggleEdgeClickMode
+              }
+            >
+              {
+                isEdgeClickMode
+                  ? 'Završi dodavanje klikom'
+                  : 'Dodaj granu klikom'
+              }
+          </button>
+
+        {
+          isEdgeClickMode
+          && (
+            <p className="edge-mode-help">
+              {
+                pendingEdgeSourceId
+                  ? 'Kliknite drugi čvor.'
+                  : 'Kliknite prvi čvor.'
+              }
+            </p>
+          )
+        }
           </section>
 
           <section className="panel-section">
@@ -532,11 +686,17 @@ function App() {
             selectedNodeId={
               selectedNodeId
             }
+            pendingEdgeSourceId={
+              pendingEdgeSourceId
+            }
             certificate={
               certificate
             }
-            onSelectNode={
-              setSelectedNodeId
+            onNodeTap={
+              handleCanvasNodeTap
+            }
+            onCanvasTap={
+              handleCanvasTap
             }
           />
 

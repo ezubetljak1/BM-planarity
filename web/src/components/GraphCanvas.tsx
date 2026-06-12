@@ -19,23 +19,35 @@ interface GraphCanvasProps {
   edges: GraphEdge[];
 
   selectedNodeId: string | null;
+  pendingEdgeSourceId: string | null;
 
   certificate?: KuratowskiCertificate;
 
-  onSelectNode: (
-    nodeId: string | null
+  onNodeTap: (
+    nodeId: string
   ) => void;
+
+  onCanvasTap: () => void;
 }
 
 function buildNodeClasses(
   vertexId: string,
   selectedNodeId: string | null,
+  pendingEdgeSourceId: string | null,
   certificate?: KuratowskiCertificate
 ): string {
   const classes: string[] = [];
 
   if (vertexId === selectedNodeId) {
     classes.push('selected');
+  }
+
+  if (
+    vertexId === pendingEdgeSourceId
+  ) {
+    classes.push(
+      'pending-edge-source'
+    );
   }
 
   if (
@@ -64,52 +76,64 @@ export function GraphCanvas({
   vertices,
   edges,
   selectedNodeId,
+  pendingEdgeSourceId,
   certificate,
-  onSelectNode
+  onNodeTap,
+  onCanvasTap
 }: GraphCanvasProps) {
   const containerRef =
-    useRef<HTMLDivElement | null>(null);
+    useRef<HTMLDivElement | null>(
+      null
+    );
 
   const cytoscapeRef =
-    useRef<Core | null>(null);
+    useRef<Core | null>(
+      null
+    );
 
   useEffect(() => {
     if (!containerRef.current) {
       return;
     }
 
-    const elements: ElementDefinition[] = [
-      ...vertices.map(vertex => ({
-        data: {
-          id: vertex.id,
-          label: vertex.label
-        },
+    const elements:
+      ElementDefinition[] = [
+        ...vertices.map(vertex => ({
+          data: {
+            id: vertex.id,
+            label: vertex.label
+          },
 
-        classes: buildNodeClasses(
-          vertex.id,
-          selectedNodeId,
-          certificate
-        )
-      })),
+          classes:
+            buildNodeClasses(
+              vertex.id,
+              selectedNodeId,
+              pendingEdgeSourceId,
+              certificate
+            )
+        })),
 
-      ...edges.map(edge => ({
-        data: {
-          id: edge.id,
-          source: edge.source,
-          target: edge.target
-        },
+        ...edges.map(edge => ({
+          data: {
+            id: edge.id,
+            source: edge.source,
+            target: edge.target
+          },
 
-        classes: buildEdgeClasses(
-          edge.id,
-          certificate
-        )
-      }))
-    ];
+          classes:
+            buildEdgeClasses(
+              edge.id,
+              certificate
+            )
+        }))
+      ];
 
-    cytoscapeRef.current?.destroy();
+    cytoscapeRef.current
+      ?.destroy();
 
     const cy = cytoscape({
-      container: containerRef.current,
+      container:
+        containerRef.current,
 
       elements,
 
@@ -119,17 +143,21 @@ export function GraphCanvas({
 
           style: {
             label: 'data(label)',
+
             width: 46,
             height: 46,
 
-            'background-color': '#334155',
+            'background-color':
+              '#334155',
 
             color: '#0f172a',
 
             'font-size': 14,
             'font-weight': 600,
 
-            'text-valign': 'bottom',
+            'text-valign':
+              'bottom',
+
             'text-margin-y': 8
           }
         },
@@ -138,18 +166,42 @@ export function GraphCanvas({
           selector: 'node.selected',
 
           style: {
-            'background-color': '#2563eb',
-            'border-color': '#1d4ed8',
+            'background-color':
+              '#2563eb',
+
+            'border-color':
+              '#1d4ed8',
+
             'border-width': 4
           }
         },
 
         {
-          selector: 'node.certificate',
+          selector:
+            'node.pending-edge-source',
 
           style: {
-            'background-color': '#dc2626',
-            'border-color': '#991b1b',
+            'background-color':
+              '#f59e0b',
+
+            'border-color':
+              '#b45309',
+
+            'border-width': 5
+          }
+        },
+
+        {
+          selector:
+            'node.certificate',
+
+          style: {
+            'background-color':
+              '#dc2626',
+
+            'border-color':
+              '#991b1b',
+
             'border-width': 4
           }
         },
@@ -159,23 +211,31 @@ export function GraphCanvas({
 
           style: {
             width: 3,
-            'line-color': '#94a3b8',
-            'curve-style': 'bezier'
+
+            'line-color':
+              '#94a3b8',
+
+            'curve-style':
+              'bezier'
           }
         },
 
         {
-          selector: 'edge.certificate',
+          selector:
+            'edge.certificate',
 
           style: {
             width: 7,
-            'line-color': '#dc2626'
+
+            'line-color':
+              '#dc2626'
           }
         }
       ],
 
       layout: {
         name: 'cose',
+
         animate: false,
         fit: true,
         padding: 36
@@ -189,7 +249,7 @@ export function GraphCanvas({
       'tap',
       'node',
       event => {
-        onSelectNode(
+        onNodeTap(
           event.target.id()
         );
       }
@@ -198,8 +258,10 @@ export function GraphCanvas({
     cy.on(
       'tap',
       event => {
-        if (event.target === cy) {
-          onSelectNode(null);
+        if (
+          event.target === cy
+        ) {
+          onCanvasTap();
         }
       }
     );
@@ -210,17 +272,21 @@ export function GraphCanvas({
       cy.destroy();
 
       if (
-        cytoscapeRef.current === cy
+        cytoscapeRef.current
+        === cy
       ) {
-        cytoscapeRef.current = null;
+        cytoscapeRef.current =
+          null;
       }
     };
   }, [
     vertices,
     edges,
     selectedNodeId,
+    pendingEdgeSourceId,
     certificate,
-    onSelectNode
+    onNodeTap,
+    onCanvasTap
   ]);
 
   return (

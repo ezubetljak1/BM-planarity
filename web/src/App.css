@@ -283,6 +283,25 @@ button {
   display: none;
 }
 
+.edge-mode-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.edge-mode-button.active {
+  color: #ffffff;
+  background: #f59e0b;
+}
+
+.edge-mode-help {
+  margin: 10px 0 0;
+
+  color: #b45309;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: 260px 1fr;
