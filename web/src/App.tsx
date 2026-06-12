@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useMemo,
   useRef,
   useState
@@ -11,19 +12,286 @@ import {
 } from './api/planarityApi';
 
 import {
-  GraphCanvas
+  GraphCanvas,
+  type GraphCanvasHandle
 } from './components/GraphCanvas';
-
-import type {
-  AnalysisSuccessResponse,
-  GraphEdge,
-  GraphVertex,
-  GraphRequest
-} from './types';
 
 import {
   GraphIoPanel
 } from './components/GraphIoPanel';
+
+import {
+  GraphTextInputPanel
+} from './components/GraphTextInputPanel';
+
+import type {
+  AnalysisSuccessResponse,
+  GraphEdge,
+  GraphPositions,
+  GraphRequest,
+  GraphVertex,
+  KuratowskiCertificate
+} from './types';
+
+function downloadTextFile(
+  filename: string,
+  content: string,
+  type: string
+) {
+  const blob =
+    new Blob(
+      [content],
+      { type }
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const anchor =
+    document.createElement(
+      'a'
+    );
+
+  anchor.href = url;
+  anchor.download = filename;
+
+  document.body.appendChild(
+    anchor
+  );
+
+  anchor.click();
+
+  document.body.removeChild(
+    anchor
+  );
+
+  URL.revokeObjectURL(
+    url
+  );
+}
+
+function createCircularPositions(
+  vertices: GraphVertex[]
+): GraphPositions {
+  const positions:
+    GraphPositions = {};
+
+  const count =
+    Math.max(
+      1,
+      vertices.length
+    );
+
+  vertices.forEach(
+    (
+      vertex,
+      index
+    ) => {
+      const angle =
+        2
+        * Math.PI
+        * index
+        / count;
+
+      positions[vertex.id] = {
+        x:
+          360
+          + 220
+          * Math.cos(angle),
+
+        y:
+          280
+          + 220
+          * Math.sin(angle)
+      };
+    }
+  );
+
+  return positions;
+}
+
+function canonicalEdgeKey(
+  firstVertexId: string,
+  secondVertexId: string
+) {
+  return firstVertexId
+    < secondVertexId
+      ? `${firstVertexId}|${secondVertexId}`
+      : `${secondVertexId}|${firstVertexId}`;
+}
+
+function findSubdivisionPaths(
+  edges: GraphEdge[],
+  certificate:
+    KuratowskiCertificate
+    | undefined
+): string[][] {
+  if (!certificate) {
+    return [];
+  }
+
+  const certificateEdgeIds =
+    new Set(
+      certificate.edgeIds
+    );
+
+  const branchVertexIds =
+    new Set(
+      certificate
+        .branchVertexIds
+    );
+
+  const adjacency =
+    new Map<
+      string,
+      string[]
+    >();
+
+  function addNeighbor(
+    vertexId: string,
+    neighborId: string
+  ) {
+    const neighbors =
+      adjacency.get(vertexId)
+      ?? [];
+
+    neighbors.push(
+      neighborId
+    );
+
+    adjacency.set(
+      vertexId,
+      neighbors
+    );
+  }
+
+  edges.forEach(edge => {
+    if (
+      !certificateEdgeIds.has(
+        edge.id
+      )
+    ) {
+      return;
+    }
+
+    addNeighbor(
+      edge.source,
+      edge.target
+    );
+
+    addNeighbor(
+      edge.target,
+      edge.source
+    );
+  });
+
+  const visitedEdges =
+    new Set<string>();
+
+  const subdivisionPaths:
+    string[][] = [];
+
+  branchVertexIds.forEach(
+    branchVertexId => {
+      const neighbors =
+        adjacency.get(
+          branchVertexId
+        )
+        ?? [];
+
+      neighbors.forEach(
+        neighborId => {
+          const firstEdgeKey =
+            canonicalEdgeKey(
+              branchVertexId,
+              neighborId
+            );
+
+          if (
+            visitedEdges.has(
+              firstEdgeKey
+            )
+          ) {
+            return;
+          }
+
+          const path = [
+            branchVertexId
+          ];
+
+          let previousVertexId =
+            branchVertexId;
+
+          let currentVertexId =
+            neighborId;
+
+          visitedEdges.add(
+            firstEdgeKey
+          );
+
+          while (true) {
+            path.push(
+              currentVertexId
+            );
+
+            if (
+              branchVertexIds.has(
+                currentVertexId
+              )
+            ) {
+              break;
+            }
+
+            const nextCandidates =
+              (
+                adjacency.get(
+                  currentVertexId
+                )
+                ?? []
+              ).filter(
+                candidate =>
+                  candidate
+                  !== previousVertexId
+              );
+
+            if (
+              nextCandidates.length
+              !== 1
+            ) {
+              break;
+            }
+
+            const nextVertexId =
+              nextCandidates[0];
+
+            visitedEdges.add(
+              canonicalEdgeKey(
+                currentVertexId,
+                nextVertexId
+              )
+            );
+
+            previousVertexId =
+              currentVertexId;
+
+            currentVertexId =
+              nextVertexId;
+          }
+
+          if (path.length > 2) {
+            subdivisionPaths.push(
+              path
+            );
+          }
+        }
+      );
+    }
+  );
+
+  return subdivisionPaths;
+}
 
 function App() {
   const [vertices, setVertices] =
@@ -32,17 +300,34 @@ function App() {
   const [edges, setEdges] =
     useState<GraphEdge[]>([]);
 
-  const [newVertexLabel, setNewVertexLabel] =
-    useState('');
+  const [
+    positionsByVertex,
+    setPositionsByVertex
+  ] = useState<GraphPositions>(
+    {}
+  );
 
-  const [edgeSource, setEdgeSource] =
-    useState('');
+  const [
+    newVertexLabel,
+    setNewVertexLabel
+  ] = useState('');
 
-  const [edgeTarget, setEdgeTarget] =
-    useState('');
+  const [
+    edgeSource,
+    setEdgeSource
+  ] = useState('');
 
-  const [selectedNodeId, setSelectedNodeId] =
-    useState<string | null>(null);
+  const [
+    edgeTarget,
+    setEdgeTarget
+  ] = useState('');
+
+  const [
+    selectedNodeId,
+    setSelectedNodeId
+  ] = useState<
+    string | null
+  >(null);
 
   const [
     isEdgeClickMode,
@@ -52,20 +337,26 @@ function App() {
   const [
     pendingEdgeSourceId,
     setPendingEdgeSourceId
-  ] = useState<string | null>(
-    null
-  );
+  ] = useState<
+    string | null
+  >(null);
 
-  const [analysis, setAnalysis] =
-    useState<AnalysisSuccessResponse | null>(
-      null
-    );
+  const [
+    analysis,
+    setAnalysis
+  ] =
+    useState<
+      AnalysisSuccessResponse
+      | null
+    >(null);
 
   const [error, setError] =
     useState('');
 
-  const [isAnalyzing, setIsAnalyzing] =
-    useState(false);
+  const [
+    isAnalyzing,
+    setIsAnalyzing
+  ] = useState(false);
 
   const nextVertexId =
     useRef(1);
@@ -73,23 +364,115 @@ function App() {
   const nextEdgeId =
     useRef(1);
 
+  const graphCanvasRef =
+    useRef<
+      GraphCanvasHandle
+      | null
+    >(null);
+
   const certificate =
     analysis?.planar
       ? undefined
-      : analysis?.certificate;
+      : analysis
+        ?.certificate;
 
   const selectedNode =
     useMemo(
       () =>
         vertices.find(
           vertex =>
-            vertex.id === selectedNodeId
-        ) ?? null,
+            vertex.id
+            === selectedNodeId
+        )
+        ?? null,
       [
         vertices,
         selectedNodeId
       ]
     );
+
+  const subdivisionPaths =
+    useMemo(
+      () =>
+        findSubdivisionPaths(
+          edges,
+          certificate
+        ),
+      [
+        edges,
+        certificate
+      ]
+    );
+
+  const subdivisionVertexIds =
+    useMemo(
+      () =>
+        [
+          ...new Set(
+            subdivisionPaths
+              .flatMap(
+                path =>
+                  path.slice(
+                    1,
+                    -1
+                  )
+              )
+          )
+        ],
+      [
+        subdivisionPaths
+      ]
+    );
+
+  const handlePositionsChange =
+    useCallback(
+      (
+        nextPositions:
+          GraphPositions
+      ) => {
+        setPositionsByVertex(
+          nextPositions
+        );
+      },
+      []
+    );
+
+  function vertexLabel(
+    vertexId: string
+  ) {
+    return (
+      vertices.find(
+        vertex =>
+          vertex.id === vertexId
+      )
+      ?.label
+      ?? vertexId
+    );
+  }
+
+  function edgeNeighborLabel(
+    vertexId: string,
+    edgeId: string
+  ) {
+    const edge =
+      edges.find(
+        candidate =>
+          candidate.id === edgeId
+      );
+
+    if (!edge) {
+      return edgeId;
+    }
+
+    const neighborId =
+      edge.source === vertexId
+        ? edge.target
+        : edge.source;
+
+    return vertexLabel(
+      neighborId
+    );
+  }
 
   function clearAnalysis() {
     setAnalysis(null);
@@ -105,7 +488,8 @@ function App() {
     } while (
       vertices.some(
         vertex =>
-          vertex.id === candidate
+          vertex.id
+          === candidate
       )
     );
 
@@ -121,7 +505,8 @@ function App() {
     } while (
       edges.some(
         edge =>
-          edge.id === candidate
+          edge.id
+          === candidate
       )
     );
 
@@ -140,17 +525,39 @@ function App() {
       return;
     }
 
-    const vertex: GraphVertex = {
-      id: createNextVertexId(),
-      label
-    };
+    const vertex:
+      GraphVertex = {
+        id:
+          createNextVertexId(),
+
+        label
+      };
 
     setVertices(current => [
       ...current,
       vertex
     ]);
 
+    setPositionsByVertex(
+      current => ({
+        ...current,
+
+        [vertex.id]: {
+          x:
+            140
+            + vertices.length
+            * 45,
+
+          y:
+            140
+            + vertices.length
+            * 25
+        }
+      })
+    );
+
     setNewVertexLabel('');
+
     setError('');
     setAnalysis(null);
   }
@@ -195,11 +602,14 @@ function App() {
       return false;
     }
 
-    const edge: GraphEdge = {
-      id: createNextEdgeId(),
-      source,
-      target
-    };
+    const edge:
+      GraphEdge = {
+        id:
+          createNextEdgeId(),
+
+        source,
+        target
+      };
 
     setEdges(current => [
       ...current,
@@ -225,47 +635,47 @@ function App() {
   }
 
   function handleCanvasNodeTap(
-  nodeId: string
-) {
-  if (!isEdgeClickMode) {
-    setSelectedNodeId(
-      nodeId
-    );
-
-    return;
-  }
-
-  if (!pendingEdgeSourceId) {
-    setPendingEdgeSourceId(
-      nodeId
-    );
-
-    setSelectedNodeId(
-      nodeId
-    );
-
-    setError('');
-
-    return;
-  }
-
-  if (
-    appendEdge(
-      pendingEdgeSourceId,
-      nodeId
-    )
+    nodeId: string
   ) {
-    setPendingEdgeSourceId(
-      null
-    );
+    if (!isEdgeClickMode) {
+      setSelectedNodeId(
+        nodeId
+      );
 
-    setSelectedNodeId(
-      null
-    );
+      return;
+    }
+
+    if (!pendingEdgeSourceId) {
+      setPendingEdgeSourceId(
+        nodeId
+      );
+
+      setSelectedNodeId(
+        nodeId
+      );
+
+      setError('');
+
+      return;
+    }
+
+    if (
+      appendEdge(
+        pendingEdgeSourceId,
+        nodeId
+      )
+    ) {
+      setPendingEdgeSourceId(
+        null
+      );
+
+      setSelectedNodeId(
+        null
+      );
+    }
   }
-}
 
-function handleCanvasTap() {
+  function handleCanvasTap() {
     setSelectedNodeId(
       null
     );
@@ -299,28 +709,54 @@ function handleCanvasTap() {
     setVertices(current =>
       current.filter(
         vertex =>
-          vertex.id !== vertexId
+          vertex.id
+          !== vertexId
       )
     );
 
     setEdges(current =>
       current.filter(
         edge =>
-          edge.source !== vertexId
-          && edge.target !== vertexId
+          edge.source
+          !== vertexId
+          && edge.target
+          !== vertexId
       )
     );
 
-    if (edgeSource === vertexId) {
+    setPositionsByVertex(
+      current => {
+        const nextPositions = {
+          ...current
+        };
+
+        delete nextPositions[
+          vertexId
+        ];
+
+        return nextPositions;
+      }
+    );
+
+    if (
+      edgeSource === vertexId
+    ) {
       setEdgeSource('');
     }
 
-    if (edgeTarget === vertexId) {
+    if (
+      edgeTarget === vertexId
+    ) {
       setEdgeTarget('');
     }
 
-    if (selectedNodeId === vertexId) {
-      setSelectedNodeId(null);
+    if (
+      selectedNodeId
+      === vertexId
+    ) {
+      setSelectedNodeId(
+        null
+      );
     }
 
     if (
@@ -351,16 +787,32 @@ function handleCanvasTap() {
   function loadGraph(
     graph: GraphRequest
   ) {
+    const nextVertices =
+      graph.vertices.map(
+        vertex => ({
+          ...vertex
+        })
+      );
+
+    const nextEdges =
+      graph.edges.map(
+        edge => ({
+          ...edge
+        })
+      );
+
     setVertices(
-      graph.vertices.map(vertex => ({
-        ...vertex
-      }))
+      nextVertices
     );
 
     setEdges(
-      graph.edges.map(edge => ({
-        ...edge
-      }))
+      nextEdges
+    );
+
+    setPositionsByVertex(
+      createCircularPositions(
+        nextVertices
+      )
     );
 
     setEdgeSource('');
@@ -387,6 +839,10 @@ function handleCanvasTap() {
     setVertices([]);
     setEdges([]);
 
+    setPositionsByVertex(
+      {}
+    );
+
     setEdgeSource('');
     setEdgeTarget('');
 
@@ -407,6 +863,62 @@ function handleCanvasTap() {
     nextEdgeId.current = 1;
   }
 
+  function exportPng() {
+    const dataUrl =
+      graphCanvasRef
+        .current
+        ?.exportPng();
+
+    if (!dataUrl) {
+      setError(
+        'Nije moguće izvesti PNG.'
+      );
+
+      return;
+    }
+
+    const anchor =
+      document.createElement(
+        'a'
+      );
+
+    anchor.href = dataUrl;
+
+    anchor.download =
+      'graph-visualization.png';
+
+    document.body.appendChild(
+      anchor
+    );
+
+    anchor.click();
+
+    document.body.removeChild(
+      anchor
+    );
+  }
+
+  function exportSvg() {
+    const svg =
+      graphCanvasRef
+        .current
+        ?.exportSvg();
+
+    if (!svg) {
+      setError(
+        'Nije moguće izvesti SVG.'
+      );
+
+      return;
+    }
+
+    downloadTextFile(
+      'graph-visualization.svg',
+      svg,
+      'image/svg+xml'
+    );
+  }
+
   async function runAnalysis() {
     setIsAnalyzing(true);
     setError('');
@@ -418,10 +930,22 @@ function handleCanvasTap() {
           edges
         });
 
+      if (
+        result.planar
+        && result.layout
+          ?.positionsByVertex
+      ) {
+        setPositionsByVertex(
+          result.layout
+            .positionsByVertex
+        );
+      }
+
       setAnalysis(result);
     } catch (caughtError) {
       const message =
-        caughtError instanceof Error
+        caughtError
+        instanceof Error
           ? caughtError.message
           : 'Nepoznata greška.';
 
@@ -441,12 +965,14 @@ function handleCanvasTap() {
           </p>
 
           <h1>
-            Interaktivni test planarnosti
+            Interaktivni test
+            planarnosti
           </h1>
 
           <p className="intro">
-            Kreirajte graf, pokrenite
-            algoritam i pregledajte planar
+            Kreirajte graf,
+            pokrenite algoritam i
+            pregledajte planar
             embedding ili Kuratowski
             certifikat.
           </p>
@@ -464,14 +990,22 @@ function handleCanvasTap() {
       <section className="workspace">
         <aside className="control-panel">
           <GraphIoPanel
-              graph={{
-                vertices,
-                edges
-              }}
-              analysis={analysis}
-              onLoadGraph={loadGraph}
-              onError={setError}
-            />
+            graph={{
+              vertices,
+              edges
+            }}
+            analysis={analysis}
+            onLoadGraph={loadGraph}
+            onError={setError}
+            onExportPng={exportPng}
+            onExportSvg={exportSvg}
+          />
+
+          <GraphTextInputPanel
+            onLoadGraph={loadGraph}
+            onError={setError}
+          />
+
           <section className="panel-section">
             <h2>
               Dodavanje čvora
@@ -488,7 +1022,8 @@ function handleCanvasTap() {
                 }
                 onKeyDown={event => {
                   if (
-                    event.key === 'Enter'
+                    event.key
+                    === 'Enter'
                   ) {
                     addVertex();
                   }
@@ -576,20 +1111,20 @@ function handleCanvasTap() {
                   ? 'Završi dodavanje klikom'
                   : 'Dodaj granu klikom'
               }
-          </button>
+            </button>
 
-        {
-          isEdgeClickMode
-          && (
-            <p className="edge-mode-help">
-              {
-                pendingEdgeSourceId
-                  ? 'Kliknite drugi čvor.'
-                  : 'Kliknite prvi čvor.'
-              }
-            </p>
-          )
-        }
+            {
+              isEdgeClickMode
+              && (
+                <p className="edge-mode-help">
+                  {
+                    pendingEdgeSourceId
+                      ? 'Kliknite drugi čvor.'
+                      : 'Kliknite prvi čvor.'
+                  }
+                </p>
+              )
+            }
           </section>
 
           <section className="panel-section">
@@ -597,33 +1132,41 @@ function handleCanvasTap() {
               Čvorovi
             </h2>
 
-            {vertices.length === 0 ? (
-              <p className="empty-text">
-                Nema čvorova.
-              </p>
-            ) : (
-              <ul className="item-list">
-                {vertices.map(vertex => (
-                  <li key={vertex.id}>
-                    <span>
-                      {vertex.label}
-                    </span>
+            {
+              vertices.length === 0
+                ? (
+                  <p className="empty-text">
+                    Nema čvorova.
+                  </p>
+                )
+                : (
+                  <ul className="item-list">
+                    {
+                      vertices.map(
+                        vertex => (
+                          <li key={vertex.id}>
+                            <span>
+                              {vertex.label}
+                            </span>
 
-                    <button
-                      className="danger-link"
-                      type="button"
-                      onClick={() =>
-                        removeVertex(
-                          vertex.id
+                            <button
+                              className="danger-link"
+                              type="button"
+                              onClick={() =>
+                                removeVertex(
+                                  vertex.id
+                                )
+                              }
+                            >
+                              Obriši
+                            </button>
+                          </li>
                         )
-                      }
-                    >
-                      Obriši
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+                      )
+                    }
+                  </ul>
+                )
+            }
           </section>
 
           <section className="panel-section">
@@ -631,56 +1174,55 @@ function handleCanvasTap() {
               Grane
             </h2>
 
-            {edges.length === 0 ? (
-              <p className="empty-text">
-                Nema grana.
-              </p>
-            ) : (
-              <ul className="item-list">
-                {edges.map(edge => {
-                  const source =
-                    vertices.find(
-                      vertex =>
-                        vertex.id
-                        === edge.source
-                    );
+            {
+              edges.length === 0
+                ? (
+                  <p className="empty-text">
+                    Nema grana.
+                  </p>
+                )
+                : (
+                  <ul className="item-list">
+                    {
+                      edges.map(edge => (
+                        <li key={edge.id}>
+                          <span>
+                            {
+                              vertexLabel(
+                                edge.source
+                              )
+                            }
+                            {' — '}
+                            {
+                              vertexLabel(
+                                edge.target
+                              )
+                            }
+                          </span>
 
-                  const target =
-                    vertices.find(
-                      vertex =>
-                        vertex.id
-                        === edge.target
-                    );
-
-                  return (
-                    <li key={edge.id}>
-                      <span>
-                        {source?.label}
-                        {' — '}
-                        {target?.label}
-                      </span>
-
-                      <button
-                        className="danger-link"
-                        type="button"
-                        onClick={() =>
-                          removeEdge(
-                            edge.id
-                          )
-                        }
-                      >
-                        Obriši
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                          <button
+                            className="danger-link"
+                            type="button"
+                            onClick={() =>
+                              removeEdge(
+                                edge.id
+                              )
+                            }
+                          >
+                            Obriši
+                          </button>
+                        </li>
+                      ))
+                    }
+                  </ul>
+                )
+            }
           </section>
         </aside>
 
         <section className="canvas-panel">
           <GraphCanvas
+            ref={graphCanvasRef}
             vertices={vertices}
             edges={edges}
             selectedNodeId={
@@ -693,10 +1235,10 @@ function handleCanvasTap() {
               certificate
             }
             positionsByVertex={
-              analysis?.planar
-                ? analysis.layout
-                  ?.positionsByVertex
-                : undefined 
+              positionsByVertex
+            }
+            subdivisionVertexIds={
+              subdivisionVertexIds
             }
             onNodeTap={
               handleCanvasNodeTap
@@ -704,24 +1246,34 @@ function handleCanvasTap() {
             onCanvasTap={
               handleCanvasTap
             }
+            onPositionsChange={
+              handlePositionsChange
+            }
           />
 
           <div className="canvas-footer">
             <span>
-              Čvorovi: {vertices.length}
+              Čvorovi: {
+                vertices.length
+              }
             </span>
 
             <span>
-              Grane: {edges.length}
+              Grane: {
+                edges.length
+              }
             </span>
 
-            {selectedNode && (
-              <span>
-                Odabrano: {
-                  selectedNode.label
-                }
-              </span>
-            )}
+            {
+              selectedNode
+              && (
+                <span>
+                  Odabrano: {
+                    selectedNode.label
+                  }
+                </span>
+              )
+            }
           </div>
         </section>
 
@@ -739,73 +1291,97 @@ function handleCanvasTap() {
             }
           </button>
 
-          {error && (
-            <div className="error-card">
-              {error}
-            </div>
-          )}
+          {
+            error
+            && (
+              <div className="error-card">
+                {error}
+              </div>
+            )
+          }
 
-          {!analysis && !error && (
-            <p className="empty-text">
-              Rezultat će se prikazati
-              nakon pokretanja algoritma.
-            </p>
-          )}
-
-          {analysis?.planar && (
-            <section className="result-card planar">
-              <h2>
-                Graf je planaran
-              </h2>
-
-              <p>
-                Pronađen je validan
-                rotation system.
+          {
+            !analysis
+            && !error
+            && (
+              <p className="empty-text">
+                Rezultat će se prikazati
+                nakon pokretanja
+                algoritma.
               </p>
+            )
+          }
 
-              <h3>
-                Ciklični poredak grana
-              </h3>
+          {
+            analysis?.planar
+            && (
+              <section className="result-card planar">
+                <h2>
+                  Graf je planaran
+                </h2>
 
-              <ul className="rotation-list">
-                {Object.entries(
-                  analysis.embedding
-                    ?.clockwiseEdgesAroundVertex
-                    ?? {}
-                ).map(
-                  ([vertexId, edgeIds]) => {
-                    const vertex =
-                      vertices.find(
-                        candidate =>
-                          candidate.id
-                          === vertexId
-                      );
+                <p>
+                  Pronađen je validan
+                  planar embedding.
+                </p>
 
-                    return (
-                      <li key={vertexId}>
-                        <strong>
-                          {
-                            vertex?.label
-                            ?? vertexId
-                          }
-                        </strong>
+                <h3>
+                  Clockwise rotacije
+                </h3>
 
-                        <span>
-                          {
-                            edgeIds.length
-                              ? edgeIds.join(
-                                  ', '
-                                )
-                              : '—'
-                          }
-                        </span>
-                      </li>
-                    );
+                <p className="muted-text">
+                  Za svaki čvor prikazan
+                  je clockwise poredak
+                  njegovih susjednih
+                  čvorova.
+                </p>
+
+                <ul className="rotation-list">
+                  {
+                    Object.entries(
+                      analysis
+                        .embedding
+                        ?.clockwiseEdgesAroundVertex
+                      ?? {}
+                    ).map(
+                      (
+                        [
+                          vertexId,
+                          edgeIds
+                        ]
+                      ) => (
+                        <li key={vertexId}>
+                          <strong>
+                            {
+                              vertexLabel(
+                                vertexId
+                              )
+                            }
+                          </strong>
+
+                          <span>
+                            {
+                              edgeIds.length
+                                ? edgeIds
+                                  .map(
+                                    edgeId =>
+                                      edgeNeighborLabel(
+                                        vertexId,
+                                        edgeId
+                                      )
+                                  )
+                                  .join(', ')
+                                : '—'
+                            }
+                          </span>
+                        </li>
+                      )
+                    )
                   }
-                )}
-              </ul>
-            </section>
-          )}
+                </ul>
+              </section>
+            )
+          }
 
           {
             analysis
@@ -830,10 +1406,25 @@ function handleCanvasTap() {
                   }
                 </div>
 
-                <p className="muted-text">
-                  Grane certifikata su
-                  označene crvenom bojom.
-                </p>
+                <ul className="legend-list">
+                  <li>
+                    <span className="legend-dot branch" />
+
+                    Branch čvor
+                  </li>
+
+                  <li>
+                    <span className="legend-dot subdivision" />
+
+                    Subdivision čvor
+                  </li>
+
+                  <li>
+                    <span className="legend-line certificate" />
+
+                    Grana certifikata
+                  </li>
+                </ul>
 
                 <h3>
                   Branch čvorovi
@@ -844,25 +1435,64 @@ function handleCanvasTap() {
                     analysis
                       .certificate
                       .branchVertexIds
-                      .map(vertexId => {
-                        const vertex =
-                          vertices.find(
-                            candidate =>
-                              candidate.id
-                              === vertexId
-                          );
-
-                        return (
+                      .map(
+                        vertexId => (
                           <li key={vertexId}>
                             {
-                              vertex?.label
-                              ?? vertexId
+                              vertexLabel(
+                                vertexId
+                              )
                             }
                           </li>
-                        );
-                      })
+                        )
+                      )
                   }
                 </ul>
+
+                {
+                  subdivisionPaths.length
+                  > 0
+                  && (
+                    <>
+                      <h3>
+                        Subdivision putevi
+                      </h3>
+
+                      <ul className="subdivision-path-list">
+                        {
+                          subdivisionPaths.map(
+                            (
+                              path,
+                              index
+                            ) => (
+                              <li key={index}>
+                                {
+                                  path
+                                    .map(
+                                      vertexId =>
+                                        vertexLabel(
+                                          vertexId
+                                        )
+                                    )
+                                    .join(' — ')
+                                }
+                              </li>
+                            )
+                          )
+                        }
+                      </ul>
+
+                      <p className="muted-text">
+                        Narandžasti čvorovi
+                        nalaze se unutar
+                        subdivizijskih puteva.
+                        Sažimanjem tih puteva
+                        dobija se označeni
+                        K3,3 ili K5 graf.
+                      </p>
+                    </>
+                  )
+                }
               </section>
             )
           }

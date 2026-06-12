@@ -64,3 +64,5 @@ export interface GraphLayout {
   positionsByVertex:
     Record<string, VertexPosition>;
 }
+
+export type GraphPositions = Record<string, VertexPosition>;

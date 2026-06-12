@@ -27,6 +27,9 @@ interface GraphIoPanelProps {
   onError: (
     message: string
   ) => void;
+
+  onExportPng: () => void;
+  onExportSvg: () => void;
 }
 
 function cloneGraph(
@@ -138,7 +141,9 @@ export function GraphIoPanel({
   graph,
   analysis,
   onLoadGraph,
-  onError
+  onError,
+  onExportPng,
+  onExportSvg
 }: GraphIoPanelProps) {
   const fileInputRef =
     useRef<HTMLInputElement | null>(
@@ -260,6 +265,24 @@ export function GraphIoPanel({
           }}
         >
           Izvezi rezultat
+        </button>
+
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={graph.vertices.length === 0}
+          onClick={onExportPng}
+        >
+          Izvezi PNG
+        </button>
+
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={graph.vertices.length === 0}
+          onClick={onExportSvg}
+        >
+          Izvezi SVG
         </button>
       </div>
 
