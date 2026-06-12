@@ -52,6 +52,10 @@ void clearRecoveredTreeEdgeSign(
 
 } // namespace
 
+void BmEmbeddingRecovery::orientForIsolation(BmEmbeddingState& state) {
+    orientRemainingBicomps(state);
+}
+
 PlanarEmbedding BmEmbeddingRecovery::recover(BmEmbeddingState& state) {
     orientRemainingBicomps(state);
     joinRemainingBicomps(state);

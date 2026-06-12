@@ -22,6 +22,16 @@ add_library(bm_planarity
     src/BmEmbeddingValidator.cpp
     src/BmEmbeddingRecovery.cpp
     src/PlanarEmbeddingValidator.cpp
+    src/KuratowskiCertificateVerifier.cpp
+    src/BmRealExternalFaceTraversal.cpp
+    src/BmKuratowskiExtractionContext.cpp
+    src/BmKuratowskiFailureFactory.cpp
+    src/BmKuratowskiPathMarker.cpp
+    src/BmKuratowskiConnectionFinder.cpp
+    src/BmKuratowskiMinorClassifier.cpp
+    src/BmKuratowskiInternalPathAnalyzer.cpp
+    src/BmKuratowskiIsolationPreparation.cpp
+    src/BmKuratowskiExtractor.cpp
 )
 
 target_include_directories(bm_planarity
@@ -46,6 +56,9 @@ add_executable(bm_planarity_tests
     tests/BmEmbeddingValidatorTest.cpp
     tests/BmEmbeddingRecoveryTest.cpp
     tests/PlanarEmbeddingValidatorTest.cpp
+    tests/KuratowskiCertificateVerifierTest.cpp
+    tests/BmKuratowskiExtractionContextTest.cpp
+    tests/BmKuratowskiFoundationTest.cpp
 )
 
 target_include_directories(bm_planarity_tests
@@ -80,6 +93,39 @@ add_executable(bm_planarity_embedding_cli
 )
 
 target_link_libraries(bm_planarity_embedding_cli
+    PRIVATE
+        bm_planarity
+)
+
+
+# Batch CLI used to validate Kuratowski certificates.
+add_executable(bm_kuratowski_verifier_cli
+    tools/BmKuratowskiVerifierCli.cpp
+)
+
+target_link_libraries(bm_kuratowski_verifier_cli
+    PRIVATE
+        bm_planarity
+)
+
+
+
+# Batch CLI used to validate automatically extracted Kuratowski certificates.
+add_executable(bm_kuratowski_certificate_cli
+    tools/BmCertificateCli.cpp
+)
+
+target_link_libraries(bm_kuratowski_certificate_cli
+    PRIVATE
+        bm_planarity
+)
+
+# Batch CLI used to smoke-test Kuratowski minor classification.
+add_executable(bm_kuratowski_classifier_cli
+    tools/BmKuratowskiClassifierCli.cpp
+)
+
+target_link_libraries(bm_kuratowski_classifier_cli
     PRIVATE
         bm_planarity
 )
@@ -123,5 +169,54 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
         PROPERTIES
             LABELS "embedding;differential"
             TIMEOUT 120
+    )
+
+    add_test(
+        NAME bm_kuratowski_verifier_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/kuratowski_verifier_regression.py
+            --cli $<TARGET_FILE:bm_kuratowski_verifier_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_kuratowski_verifier_regression_quick
+        PROPERTIES
+            LABELS "kuratowski;differential"
+            TIMEOUT 120
+    )
+
+    add_test(
+        NAME bm_kuratowski_classifier_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/kuratowski_classifier_regression.py
+            --cli $<TARGET_FILE:bm_kuratowski_classifier_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_kuratowski_classifier_regression_quick
+        PROPERTIES
+            LABELS "kuratowski;differential"
+            TIMEOUT 120
+    )
+
+
+    add_test(
+        NAME bm_kuratowski_extractor_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/kuratowski_extractor_regression.py
+            --cli $<TARGET_FILE:bm_kuratowski_certificate_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_kuratowski_extractor_regression_quick
+        PROPERTIES
+            LABELS "kuratowski;differential"
+            TIMEOUT 180
     )
 endif()

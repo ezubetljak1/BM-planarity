@@ -23,6 +23,11 @@ struct DfsInfo {
 
     std::vector<int> parent;
     std::vector<int> parentEdgeId;
+
+    // Inclusive maximum DFS index in each DFS subtree.
+    // DFS preorder makes every subtree a contiguous interval.
+    std::vector<int> subtreeEndDfi;
+
     std::vector<std::vector<int>> children;
 
     std::vector<int> treeEdgeIds;

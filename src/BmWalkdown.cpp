@@ -3,6 +3,7 @@
 #include "bm/BmExternalFaceTraversal.hpp"
 
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace bm {
@@ -23,7 +24,7 @@ BmWalkdownResult BmWalkdown::run(BmEmbeddingState& state, int currentVertex, int
     // The main BM driver calls Walkdown only for pertinent DFS subtrees.
     // Keep the operation safe when called directly from a test or helper.
     if (!state.hasPertinentRoots(child)) {
-        return {true};
+        return {true, std::nullopt};
     }
 
     const int currentDfi = state.dfsInfo().dfsIndex[currentVertex];
@@ -107,7 +108,17 @@ BmWalkdownResult BmWalkdown::run(BmEmbeddingState& state, int currentVertex, int
                     // non-pertinent externally active vertices.
                     // This is the immediate Walkdown blocking
                     // configuration from Section 5.2.
-                    return {false};
+                    BmWalkdownFailure failure;
+                    failure.reason = BmWalkdownFailureReason::BlockedChildBicomp;
+                    failure.currentVertex = currentVertex;
+                    failure.topRootId = rootId;
+                    failure.rootOutgoingLink = rootOutgoingLink;
+                    failure.blockingVertex = vertex;
+                    failure.blockingIncomingLink = position.linkIndex;
+                    failure.blockingChildRootId = childRootId;
+                    failure.mergeStack = mergeStack;
+
+                    return {false, std::move(failure)};
                 }
 
                 BmMergeFrame frame;
@@ -140,11 +151,19 @@ BmWalkdownResult BmWalkdown::run(BmEmbeddingState& state, int currentVertex, int
         }
 
         if (!mergeStack.empty()) {
-            return {false};
+            BmWalkdownFailure failure;
+            failure.reason = BmWalkdownFailureReason::NonEmptyMergeStack;
+            failure.currentVertex = currentVertex;
+            failure.topRootId = rootId;
+            failure.rootOutgoingLink = rootOutgoingLink;
+            failure.blockingChildRootId = mergeStack.back().rootId;
+            failure.mergeStack = mergeStack;
+
+            return {false, std::move(failure)};
         }
     }
 
-    return {true};
+    return {true, std::nullopt};
 }
 
 bool BmWalkdown::isRootPosition(const BmEmbeddingState& state, BmExternalFacePosition position) {
