@@ -488,3 +488,22 @@ brzi Kuratowski regression test pokreće se i kroz:
 ```powershell
 ctest --test-dir build --output-on-failure -L kuratowski
 ```
+
+
+BUILD OD NULE:
+```powershell
+cmake `
+    -S . `
+    -B build `
+    -G Ninja `
+    -DCMAKE_BUILD_TYPE=Release `
+    -DBM_ENABLE_JSON_TOOLS=ON `
+    -DBM_ENABLE_API_SERVER=ON `
+    -DBM_ENABLE_OGDF_LAYOUT=ON `
+    -DBM_ENABLE_DIFFERENTIAL_TESTS=ON `
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
+    -DOGDF_DIR="$PWD\third_party\ogdf-build"
+
+cmake --build build
+ctest --test-dir build --output-on-failure
+```

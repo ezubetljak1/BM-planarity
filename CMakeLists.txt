@@ -220,3 +220,205 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
             TIMEOUT 180
     )
 endif()
+
+# Optional JSON tools used by the UI/API layer.
+option(
+    BM_ENABLE_JSON_TOOLS
+    "Build JSON input/output tools for UI and API integration"
+    OFF
+)
+
+if(BM_ENABLE_JSON_TOOLS)
+    find_package(nlohmann_json CONFIG QUIET)
+
+    if(NOT nlohmann_json_FOUND)
+        include(FetchContent)
+
+        set(JSON_BuildTests OFF CACHE INTERNAL "")
+
+        FetchContent_Declare(
+            nlohmann_json
+            URL
+                https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+            URL_HASH
+                SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+        )
+
+        FetchContent_MakeAvailable(
+            nlohmann_json
+        )
+    endif()
+
+    add_library(bm_planarity_json
+        src/io/GraphJsonAdapter.cpp
+    )
+
+    target_include_directories(
+        bm_planarity_json
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    target_link_libraries(
+        bm_planarity_json
+        PUBLIC
+            bm_planarity
+            nlohmann_json::nlohmann_json
+    )
+
+    add_executable(
+        bm_planarity_json_cli
+        tools/BmJsonCli.cpp
+    )
+
+    target_link_libraries(
+        bm_planarity_json_cli
+        PRIVATE
+            bm_planarity_json
+    )
+endif()
+
+# Optional local REST API used by the web frontend.
+option(
+    BM_ENABLE_API_SERVER
+    "Build local HTTP API server for UI integration"
+    OFF
+)
+
+if(BM_ENABLE_API_SERVER)
+    if(NOT BM_ENABLE_JSON_TOOLS)
+        message(
+            FATAL_ERROR
+            "BM_ENABLE_API_SERVER requires BM_ENABLE_JSON_TOOLS=ON"
+        )
+    endif()
+
+    include(FetchContent)
+
+    set(
+        HTTPLIB_INSTALL
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_TEST
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    # Za sada koristimo obični lokalni HTTP.
+    # TLS može kasnije rješavati reverse proxy pri deploymentu.
+    set(
+        HTTPLIB_USE_OPENSSL_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_USE_ZLIB_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_USE_BROTLI_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_USE_ZSTD_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    FetchContent_Declare(
+        httplib
+        GIT_REPOSITORY
+            https://github.com/yhirose/cpp-httplib.git
+        GIT_TAG
+            v0.47.0
+        GIT_SHALLOW
+            TRUE
+    )
+
+    FetchContent_MakeAvailable(
+        httplib
+    )
+
+    add_executable(
+        bm_planarity_api
+        api/BmApiServer.cpp
+    )
+
+    target_link_libraries(
+        bm_planarity_api
+        PRIVATE
+            bm_planarity_json
+            httplib::httplib
+    )
+endif()
+
+# Optional OGDF planar drawing adapter.
+option(
+    BM_ENABLE_OGDF_LAYOUT
+    "Build OGDF fixed-embedding planar layout adapter"
+    OFF
+)
+
+if(BM_ENABLE_OGDF_LAYOUT)
+    if(NOT BM_ENABLE_API_SERVER)
+        message(
+            FATAL_ERROR
+            "BM_ENABLE_OGDF_LAYOUT requires BM_ENABLE_API_SERVER=ON"
+        )
+    endif()
+
+    find_package(
+        OGDF
+        REQUIRED
+    )
+
+    add_library(
+        bm_planarity_ogdf_layout
+        api/layout/OgdfPlanarLayoutAdapter.cpp
+    )
+
+    target_include_directories(
+        bm_planarity_ogdf_layout
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/api
+    )
+
+    target_link_libraries(
+        bm_planarity_ogdf_layout
+        PUBLIC
+            bm_planarity
+            OGDF
+    )
+
+    target_link_libraries(
+        bm_planarity_api
+        PRIVATE
+            bm_planarity_ogdf_layout
+    )
+
+    target_compile_definitions(
+        bm_planarity_api
+        PRIVATE
+            BM_ENABLE_OGDF_LAYOUT=1
+    )
+endif()
