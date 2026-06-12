@@ -1,0 +1,27 @@
+{
+  "vertices": [
+    { "id": "x1", "label": "x1" },
+    { "id": "x2", "label": "x2" },
+    { "id": "x3", "label": "x3" },
+    { "id": "x4", "label": "x4" },
+    { "id": "x5", "label": "x5" },
+    { "id": "s1", "label": "s1" }
+  ],
+  "edges": [
+    { "id": "e1", "source": "x1", "target": "s1" },
+    { "id": "e2", "source": "s1", "target": "x2" },
+
+    { "id": "e3", "source": "x1", "target": "x3" },
+    { "id": "e4", "source": "x1", "target": "x4" },
+    { "id": "e5", "source": "x1", "target": "x5" },
+
+    { "id": "e6", "source": "x2", "target": "x3" },
+    { "id": "e7", "source": "x2", "target": "x4" },
+    { "id": "e8", "source": "x2", "target": "x5" },
+
+    { "id": "e9", "source": "x3", "target": "x4" },
+    { "id": "e10", "source": "x3", "target": "x5" },
+
+    { "id": "e11", "source": "x4", "target": "x5" }
+  ]
+}

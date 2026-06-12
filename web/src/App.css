@@ -302,6 +302,70 @@ button {
   font-weight: 700;
 }
 
+.legend-list {
+  display: grid;
+  gap: 8px;
+
+  margin: 18px 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  color: #475569;
+
+  font-size: 13px;
+}
+
+.legend-dot {
+  display: inline-block;
+
+  width: 16px;
+  height: 16px;
+
+  border-radius: 50%;
+}
+
+.legend-dot.branch {
+  border: 2px solid #991b1b;
+  background: #dc2626;
+}
+
+.legend-dot.subdivision {
+  border: 2px solid #c2410c;
+  background: #f97316;
+}
+
+.legend-line {
+  display: inline-block;
+
+  width: 24px;
+  height: 0;
+
+  border-top-width: 4px;
+  border-top-style: solid;
+}
+
+.legend-line.certificate {
+  border-top-color: #dc2626;
+}
+
+.subdivision-path-list {
+  display: grid;
+  gap: 7px;
+
+  padding-left: 20px;
+
+  color: #475569;
+
+  font-size: 14px;
+}
+
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: 260px 1fr;
