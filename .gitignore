@@ -87,3 +87,5 @@ CMakeUserPresets.json
 
 third_party/ogdf-src/
 third_party/ogdf-build/
+# Generated evaluation artefacts
+results/

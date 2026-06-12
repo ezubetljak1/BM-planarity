@@ -422,3 +422,22 @@ if(BM_ENABLE_OGDF_LAYOUT)
             BM_ENABLE_OGDF_LAYOUT=1
     )
 endif()
+# Optional direct core benchmark used for thesis performance evaluation.
+option(
+    BM_ENABLE_BENCHMARKS
+    "Build direct Boyer-Myrvold core benchmark executable"
+    OFF
+)
+
+if(BM_ENABLE_BENCHMARKS)
+    add_executable(
+        bm_planarity_benchmark
+        benchmarks/BmPlanarityBenchmark.cpp
+    )
+
+    target_link_libraries(
+        bm_planarity_benchmark
+        PRIVATE
+            bm_planarity
+    )
+endif()
