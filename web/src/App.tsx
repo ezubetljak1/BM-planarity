@@ -20,6 +20,10 @@ import {
   GraphIoPanel
 } from './components/GraphIoPanel';
 
+import {
+  GraphTextInputPanel
+} from './components/GraphTextInputPanel';
+
 import type {
   AnalysisSuccessResponse,
   GraphEdge,
@@ -995,6 +999,11 @@ function App() {
             onError={setError}
             onExportPng={exportPng}
             onExportSvg={exportSvg}
+          />
+
+          <GraphTextInputPanel
+            onLoadGraph={loadGraph}
+            onError={setError}
           />
 
           <section className="panel-section">
