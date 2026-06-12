@@ -39,6 +39,7 @@ export interface AnalysisSuccessResponse {
 
   embedding?: PlanarEmbedding;
   certificate?: KuratowskiCertificate;
+  layout?: GraphLayout;
 }
 
 export interface AnalysisErrorResponse {
@@ -53,3 +54,13 @@ export interface AnalysisErrorResponse {
 export type AnalysisResponse =
   | AnalysisSuccessResponse
   | AnalysisErrorResponse;
+
+export interface VertexPosition {
+  x: number;
+  y: number;
+}
+
+export interface GraphLayout {
+  positionsByVertex:
+    Record<string, VertexPosition>;
+}

@@ -9,6 +9,10 @@
 #include <stdexcept>
 #include <string>
 
+#ifdef BM_ENABLE_OGDF_LAYOUT
+#include "layout/OgdfPlanarLayoutAdapter.hpp"
+#endif
+
 namespace {
 
 using Json = nlohmann::json;
@@ -45,6 +49,36 @@ void setErrorResponse(httplib::Response& response, int status, const std::string
     });
 }
 
+#ifdef BM_ENABLE_OGDF_LAYOUT
+
+void addLayoutToJson(
+    Json& output, const bm::io::ParsedJsonGraph& parsedGraph, const bm::layout::PlanarLayout& layout) {
+    if (layout.positionsByVertex.size() != parsedGraph.vertices.size()) 
+        throw std::logic_error("Layout vertex count does not match graph.");
+
+    Json positionsByVertex = Json::object();
+
+    for (int vertexIndex = 0; vertexIndex < parsedGraph.vertices.size(); ++vertexIndex) {
+        const auto& vertex = parsedGraph.vertices[vertexIndex];
+        const auto& position = layout.positionsByVertex[vertexIndex];
+
+        positionsByVertex[vertex.id] = 
+        {
+            {"x", position.x},
+            {"y", position.y}
+        };
+    }
+
+    output["layout"] = {
+        {
+            "positionsByVertex",
+            std::move(positionsByVertex)
+        }
+    };
+}
+
+#endif
+
 } // namespace
 
 int main() {
@@ -74,7 +108,23 @@ int main() {
 
             const bm::PlanarityResult result = algorithm.run(parsedGraph.graph);
 
-            setJsonResponse(response, 200, bm::io::GraphJsonAdapter::toJson(parsedGraph, result));
+            Json output = bm::io::GraphJsonAdapter::toJson(parsedGraph, result);
+
+            #ifdef BM_ENABLE_OGDF_LAYOUT
+
+            if (result.planar && result.embedding.has_value()) {
+                const auto layout = bm::layout::OgdfPlanarLayoutAdapter::compute(parsedGraph.graph, *result.embedding);
+
+                addLayoutToJson(
+                    output,
+                    parsedGraph,
+                    layout
+                );
+            }
+
+            #endif
+
+            setJsonResponse(response, 200, output);        
         } catch (const nlohmann::json::parse_error& error) {
             setErrorResponse(response, 400, std::string("Invalid JSON: ") + error.what());
         } catch (const std::invalid_argument& error) {

@@ -23,6 +23,14 @@ interface GraphCanvasProps {
 
   certificate?: KuratowskiCertificate;
 
+  positionsByVertex?: Record<
+    string, 
+    {
+        x: number;
+        y: number;
+    }
+  >;
+
   onNodeTap: (
     nodeId: string
   ) => void;
@@ -78,6 +86,7 @@ export function GraphCanvas({
   selectedNodeId,
   pendingEdgeSourceId,
   certificate,
+  positionsByVertex,
   onNodeTap,
   onCanvasTap
 }: GraphCanvasProps) {
@@ -103,6 +112,11 @@ export function GraphCanvas({
             id: vertex.id,
             label: vertex.label
           },
+
+          position:
+            positionsByVertex?.[
+                vertex.id
+            ],
 
           classes:
             buildNodeClasses(
@@ -234,7 +248,10 @@ export function GraphCanvas({
       ],
 
       layout: {
-        name: 'cose',
+        name: 
+            positionsByVertex 
+                ? 'preset'
+                : 'cose',
 
         animate: false,
         fit: true,
@@ -285,6 +302,7 @@ export function GraphCanvas({
     selectedNodeId,
     pendingEdgeSourceId,
     certificate,
+    positionsByVertex,
     onNodeTap,
     onCanvasTap
   ]);

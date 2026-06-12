@@ -692,6 +692,12 @@ function handleCanvasTap() {
             certificate={
               certificate
             }
+            positionsByVertex={
+              analysis?.planar
+                ? analysis.layout
+                  ?.positionsByVertex
+                : undefined 
+            }
             onNodeTap={
               handleCanvasNodeTap
             }

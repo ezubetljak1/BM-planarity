@@ -371,3 +371,54 @@ if(BM_ENABLE_API_SERVER)
             httplib::httplib
     )
 endif()
+
+# Optional OGDF planar drawing adapter.
+option(
+    BM_ENABLE_OGDF_LAYOUT
+    "Build OGDF fixed-embedding planar layout adapter"
+    OFF
+)
+
+if(BM_ENABLE_OGDF_LAYOUT)
+    if(NOT BM_ENABLE_API_SERVER)
+        message(
+            FATAL_ERROR
+            "BM_ENABLE_OGDF_LAYOUT requires BM_ENABLE_API_SERVER=ON"
+        )
+    endif()
+
+    find_package(
+        OGDF
+        REQUIRED
+    )
+
+    add_library(
+        bm_planarity_ogdf_layout
+        api/layout/OgdfPlanarLayoutAdapter.cpp
+    )
+
+    target_include_directories(
+        bm_planarity_ogdf_layout
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/api
+    )
+
+    target_link_libraries(
+        bm_planarity_ogdf_layout
+        PUBLIC
+            bm_planarity
+            OGDF
+    )
+
+    target_link_libraries(
+        bm_planarity_api
+        PRIVATE
+            bm_planarity_ogdf_layout
+    )
+
+    target_compile_definitions(
+        bm_planarity_api
+        PRIVATE
+            BM_ENABLE_OGDF_LAYOUT=1
+    )
+endif()

@@ -83,4 +83,7 @@ CMakeUserPresets.json
 *.gcda
 *.gcno
 *.profraw
-*.profdata
+*.
+
+third_party/ogdf-src/
+third_party/ogdf-build/
