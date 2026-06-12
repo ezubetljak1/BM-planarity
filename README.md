@@ -424,3 +424,67 @@ ctest --test-dir build --output-on-failure -L differential
 
 Napomena: ovaj sloj validira certifikate, ali još ne izdvaja certifikat automatski iz
 Boyer-Myrvold failure stanja. Referentni A-E isolator predstavlja narednu fazu implementacije.
+
+## Kuratowski certifikati za neplanarne grafove
+
+Za neplanaran graf javni rezultat sadrži `KuratowskiCertificate` sa originalnim ID-jevima
+garana koje čine subdiviziju `K5` ili `K3,3`. Ekstrakcija se pokreće direktno iz
+sačuvanog Walkdown failure konteksta; ne pokreće ponovo test planarnosti i ne koristi
+external-face shortcut linkove kao stvarne grane certifikata.
+
+Certifikat se nezavisno provjerava u C++ sloju pomoću:
+
+```text
+KuratowskiCertificateVerifier
+```
+
+Verifier logički potiskuje degree-2 subdivision vertexe i zahtijeva da preostali kernel
+bude tačno `K5` ili `K3,3`.
+
+### NetworkX regresija automatski izdvojenih certifikata
+
+Pored unit testova postoji i opcionalni regression alat:
+
+```text
+tools/BmCertificateCli.cpp
+tools/kuratowski_extractor_regression.py
+```
+
+Za svaki generisani graf skripta:
+
+```text
+provjerava odluku PLANAR / NONPLANAR pomoću NetworkX-a
+za svaki NONPLANAR rezultat učitava originalne edge ID-jeve iz C++ certifikata
+nezavisno potiskuje degree-2 subdivision puteve
+provjerava da je dobijeni kernel izomorfan sa K5 ili K3,3
+```
+
+Brzi profil:
+
+```powershell
+py tools\kuratowski_extractor_regression.py `
+    --cli .\build\bm_kuratowski_certificate_cli.exe `
+    --profile quick
+```
+
+Puni profil prije merge-a većih izmjena:
+
+```powershell
+py tools\kuratowski_extractor_regression.py `
+    --cli .\build\bm_kuratowski_certificate_cli.exe `
+    --profile full
+```
+
+Kod Visual Studio generatora executable se najčešće nalazi u `build\Debug\` folderu.
+
+Ako je projekat konfigurisan sa:
+
+```powershell
+cmake -S . -B build -G Ninja -DBM_ENABLE_DIFFERENTIAL_TESTS=ON
+```
+
+brzi Kuratowski regression test pokreće se i kroz:
+
+```powershell
+ctest --test-dir build --output-on-failure -L kuratowski
+```

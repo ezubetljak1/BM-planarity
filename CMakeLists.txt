@@ -109,6 +109,17 @@ target_link_libraries(bm_kuratowski_verifier_cli
 )
 
 
+
+# Batch CLI used to validate automatically extracted Kuratowski certificates.
+add_executable(bm_kuratowski_certificate_cli
+    tools/BmCertificateCli.cpp
+)
+
+target_link_libraries(bm_kuratowski_certificate_cli
+    PRIVATE
+        bm_planarity
+)
+
 # Batch CLI used to smoke-test Kuratowski minor classification.
 add_executable(bm_kuratowski_classifier_cli
     tools/BmKuratowskiClassifierCli.cpp
@@ -190,5 +201,22 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
         PROPERTIES
             LABELS "kuratowski;differential"
             TIMEOUT 120
+    )
+
+
+    add_test(
+        NAME bm_kuratowski_extractor_regression_quick
+        COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/kuratowski_extractor_regression.py
+            --cli $<TARGET_FILE:bm_kuratowski_certificate_cli>
+            --profile quick
+    )
+
+    set_tests_properties(
+        bm_kuratowski_extractor_regression_quick
+        PROPERTIES
+            LABELS "kuratowski;differential"
+            TIMEOUT 180
     )
 endif()

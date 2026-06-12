@@ -24,8 +24,11 @@ std::vector<bool> allowedSeparatedDescendants(
         --difference[static_cast<std::size_t>(end + 1)];
     };
 
-    markInterval(cutVertex);
-
+    // A future-pertinent connection may be direct from the cut vertex or
+    // enter one of its still-separated DFS-child subtrees. Descendants that
+    // have already been merged into the cut vertex bicomp must not be
+    // considered here; the reference _FindUnembeddedEdgeToAncestor routine
+    // scans only the direct least-ancestor edge and separated DFS children.
     for (int child : state.separatedDfsChildren(cutVertex)) {
         markInterval(child);
     }
@@ -42,6 +45,7 @@ std::vector<bool> allowedSeparatedDescendants(
         }
     }
 
+    allowed[static_cast<std::size_t>(cutVertex)] = true;
     return allowed;
 }
 

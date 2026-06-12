@@ -352,3 +352,33 @@ BM_TEST(BmKuratowskiMinorClassifierRecognizesMinorEForK5) {
         BM_ASSERT(!context.xyPathOriginalEdgeIds.empty());
     });
 }
+
+BM_TEST(BmKuratowskiExtractorIsolatesMinorC) {
+    const Graph graph = makeInitialMinorCGraph();
+
+    inspectFirstFailure(graph, [&](const BmEmbeddingState& state, const BmWalkdownFailure& failure) {
+        const KuratowskiCertificate certificate = BmKuratowskiExtractor::extract(state, failure);
+        KuratowskiCertificateVerifier::validate(graph, certificate);
+        BM_ASSERT(certificate.type == KuratowskiType::K33);
+    });
+}
+
+BM_TEST(BmKuratowskiExtractorIsolatesMinorD) {
+    const Graph graph = makeInitialMinorDGraph();
+
+    inspectFirstFailure(graph, [&](const BmEmbeddingState& state, const BmWalkdownFailure& failure) {
+        const KuratowskiCertificate certificate = BmKuratowskiExtractor::extract(state, failure);
+        KuratowskiCertificateVerifier::validate(graph, certificate);
+        BM_ASSERT(certificate.type == KuratowskiType::K33);
+    });
+}
+
+BM_TEST(BmKuratowskiExtractorIsolatesMinorEForK5) {
+    const Graph graph = makeK5();
+
+    inspectFirstFailure(graph, [&](const BmEmbeddingState& state, const BmWalkdownFailure& failure) {
+        const KuratowskiCertificate certificate = BmKuratowskiExtractor::extract(state, failure);
+        KuratowskiCertificateVerifier::validate(graph, certificate);
+        BM_ASSERT(certificate.type == KuratowskiType::K5);
+    });
+}

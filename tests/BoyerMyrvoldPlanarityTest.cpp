@@ -2,6 +2,7 @@
 
 #include "bm/BoyerMyrvoldPlanarity.hpp"
 #include "bm/Graph.hpp"
+#include "bm/KuratowskiCertificateVerifier.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -248,4 +249,62 @@ BM_TEST(BoyerMyrvoldExhaustivelyChecksAllFiveVertexGraphs) {
 
         BM_ASSERT(algorithm.run(graph).planar == expectedPlanar);
     }
+}
+
+
+BM_TEST(BoyerMyrvoldReturnsVerifiedK33Certificate) {
+    Graph graph(6);
+
+    for (int left = 0; left < 3; ++left) {
+        for (int right = 3; right < 6; ++right) {
+            graph.addEdge(left, right);
+        }
+    }
+
+    BoyerMyrvoldPlanarity algorithm;
+    const PlanarityResult result = algorithm.run(graph);
+
+    BM_ASSERT(!result.planar);
+    BM_ASSERT(!result.embedding.has_value());
+    BM_ASSERT(result.certificate.has_value());
+    BM_ASSERT(result.certificate->type == KuratowskiType::K33);
+
+    KuratowskiCertificateVerifier::validate(graph, *result.certificate);
+}
+
+BM_TEST(BoyerMyrvoldReturnsVerifiedK5Certificate) {
+    Graph graph(5);
+
+    for (int first = 0; first < 5; ++first) {
+        for (int second = first + 1; second < 5; ++second) {
+            graph.addEdge(first, second);
+        }
+    }
+
+    BoyerMyrvoldPlanarity algorithm;
+    const PlanarityResult result = algorithm.run(graph);
+
+    BM_ASSERT(!result.planar);
+    BM_ASSERT(result.certificate.has_value());
+    BM_ASSERT(result.certificate->type == KuratowskiType::K5);
+
+    KuratowskiCertificateVerifier::validate(graph, *result.certificate);
+}
+
+BM_TEST(BoyerMyrvoldReturnsVerifiedCertificateForDenseSimpleGraph) {
+    Graph graph(7);
+
+    for (int first = 0; first < 7; ++first) {
+        for (int second = first + 1; second < 7; ++second) {
+            graph.addEdge(first, second);
+        }
+    }
+
+    BoyerMyrvoldPlanarity algorithm;
+    const PlanarityResult result = algorithm.run(graph);
+
+    BM_ASSERT(!result.planar);
+    BM_ASSERT(result.certificate.has_value());
+
+    KuratowskiCertificateVerifier::validate(graph, *result.certificate);
 }

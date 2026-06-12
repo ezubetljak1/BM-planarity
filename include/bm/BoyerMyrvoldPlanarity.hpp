@@ -12,9 +12,8 @@ public:
     PlanarityResult run(const Graph& graph) const;
 
 private:
-
     static PlanarityResult makePlanarResult(PlanarEmbedding embedding);
-    static PlanarityResult makePlaceholderNonPlanarResult();
+    static PlanarityResult makeNonPlanarResult(KuratowskiCertificate certificate);
 };
 
 } // namespace bm

@@ -10,8 +10,14 @@ namespace bm {
 
 class BmKuratowskiExtractor {
 public:
-    // Extracts the reference Minor A and Minor B Kuratowski subdivisions.
-    // C, D and E are added by the subsequent internal-X-Y-path stage.
+    // Extracts and independently verifies a Kuratowski subdivision from the
+    // preserved decision-core failure snapshot.
+    static KuratowskiCertificate extract(
+        const BmEmbeddingState& state,
+        const BmWalkdownFailure& failure
+    );
+
+    // Retained for focused A/B unit tests.
     static KuratowskiCertificate extractInitialMinor(
         const BmEmbeddingState& state,
         const BmWalkdownFailure& failure
@@ -24,6 +30,21 @@ private:
     );
 
     static KuratowskiCertificate isolateMinorB(
+        const BmEmbeddingState& state,
+        const BmKuratowskiExtractionContext& context
+    );
+
+    static KuratowskiCertificate isolateMinorC(
+        const BmEmbeddingState& state,
+        const BmKuratowskiExtractionContext& context
+    );
+
+    static KuratowskiCertificate isolateMinorD(
+        const BmEmbeddingState& state,
+        const BmKuratowskiExtractionContext& context
+    );
+
+    static KuratowskiCertificate isolateMinorE(
         const BmEmbeddingState& state,
         const BmKuratowskiExtractionContext& context
     );

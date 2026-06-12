@@ -135,3 +135,43 @@ external-face optimization links while initializing the obstruction context.
   first pertinent vertex needed by the later minor A-E isolator.
 - Certificate extraction can continue without rerunning the decision algorithm or reconstructing a
   lost conflict state.
+
+---
+
+## DD-009 — Extract Kuratowski subdivisions from preserved failure state
+
+### Decision
+After the decision core reports `NONPLANAR`, isolate a Kuratowski subdivision directly from the
+preserved Walkdown failure snapshot. Classify the obstruction as Boyer-Myrvold Minor A-E, mark the
+required real external-face paths, DFS paths and original unembedded back edges, and expose only
+stable original graph edge IDs in the public certificate.
+
+### Reason
+Rerunning planarity tests while deleting edges would be substantially more expensive and would
+ignore the linear post-failure isolator described by Boyer and Myrvold. Shortcut traversal links are
+optimization metadata and must not leak into the public witness.
+
+### Consequences
+- `BmKuratowskiExtractor` dispatches reference-style Minor A-E isolators.
+- `BmRealExternalFaceTraversal` is used when marking certificate paths.
+- `KuratowskiCertificateVerifier` independently validates every extracted witness.
+- NetworkX-backed regression suppresses subdivision paths independently in Python.
+
+---
+
+## DD-010 — Reduce very dense simple inputs before certified isolation
+
+### Decision
+When a simple graph with `n >= 3` has more than `3n - 5` edges, run the certifying Boyer-Myrvold
+core on an arbitrary `3n - 5`-edge subgraph and map the resulting witness back to original stable
+edge IDs.
+
+### Reason
+Every simple planar graph has at most `3n - 6` edges. Therefore every simple `3n - 5`-edge
+subgraph is already non-planar and contains a Kuratowski subdivision. Bounding the graph passed to
+the certifying core preserves the intended linear-size working set.
+
+### Consequences
+- Input validation still costs `O(n + m)` because all input edges must be read and checked.
+- The Boyer-Myrvold certifying core processes at most `3n - 5` edges.
+- Public certificate edge IDs always refer to the original graph.
