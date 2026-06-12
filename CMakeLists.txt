@@ -277,3 +277,97 @@ if(BM_ENABLE_JSON_TOOLS)
             bm_planarity_json
     )
 endif()
+
+# Optional local REST API used by the web frontend.
+option(
+    BM_ENABLE_API_SERVER
+    "Build local HTTP API server for UI integration"
+    OFF
+)
+
+if(BM_ENABLE_API_SERVER)
+    if(NOT BM_ENABLE_JSON_TOOLS)
+        message(
+            FATAL_ERROR
+            "BM_ENABLE_API_SERVER requires BM_ENABLE_JSON_TOOLS=ON"
+        )
+    endif()
+
+    include(FetchContent)
+
+    set(
+        HTTPLIB_INSTALL
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_TEST
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    # Za sada koristimo obični lokalni HTTP.
+    # TLS može kasnije rješavati reverse proxy pri deploymentu.
+    set(
+        HTTPLIB_USE_OPENSSL_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_USE_ZLIB_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_USE_BROTLI_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    set(
+        HTTPLIB_USE_ZSTD_IF_AVAILABLE
+        OFF
+        CACHE BOOL
+        ""
+        FORCE
+    )
+
+    FetchContent_Declare(
+        httplib
+        GIT_REPOSITORY
+            https://github.com/yhirose/cpp-httplib.git
+        GIT_TAG
+            v0.47.0
+        GIT_SHALLOW
+            TRUE
+    )
+
+    FetchContent_MakeAvailable(
+        httplib
+    )
+
+    add_executable(
+        bm_planarity_api
+        api/BmApiServer.cpp
+    )
+
+    target_link_libraries(
+        bm_planarity_api
+        PRIVATE
+            bm_planarity_json
+            httplib::httplib
+    )
+endif()
