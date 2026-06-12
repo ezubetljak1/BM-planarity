@@ -270,6 +270,19 @@ button {
   font-weight: 800;
 }
 
+.button-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.button-grid button {
+  width: 100%;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: 260px 1fr;

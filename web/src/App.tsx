@@ -17,8 +17,13 @@ import {
 import type {
   AnalysisSuccessResponse,
   GraphEdge,
-  GraphVertex
+  GraphVertex,
+  GraphRequest
 } from './types';
+
+import {
+  GraphIoPanel
+} from './components/GraphIoPanel';
 
 function App() {
   const [vertices, setVertices] =
@@ -79,6 +84,38 @@ function App() {
     setError('');
   }
 
+  function createNextVertexId() {
+    let candidate = '';
+
+    do {
+      candidate =
+        `v${nextVertexId.current++}`;
+    } while (
+      vertices.some(
+        vertex =>
+          vertex.id === candidate
+      )
+    );
+
+    return candidate;
+  }
+
+  function createNextEdgeId() {
+    let candidate = '';
+
+    do {
+      candidate =
+        `e${nextEdgeId.current++}`;
+    } while (
+      edges.some(
+        edge =>
+          edge.id === candidate
+      )
+    );
+
+    return candidate;
+  }
+
   function addVertex() {
     const label =
       newVertexLabel.trim();
@@ -92,7 +129,7 @@ function App() {
     }
 
     const vertex: GraphVertex = {
-      id: `v${nextVertexId.current++}`,
+      id: createNextVertexId(),
       label
     };
 
@@ -144,7 +181,7 @@ function App() {
     }
 
     const edge: GraphEdge = {
-      id: `e${nextEdgeId.current++}`,
+      id: createNextEdgeId(),
       source: edgeSource,
       target: edgeTarget
     };
@@ -202,6 +239,33 @@ function App() {
     );
 
     clearAnalysis();
+  }
+
+  function loadGraph(
+    graph: GraphRequest
+  ) {
+    setVertices(
+      graph.vertices.map(vertex => ({
+        ...vertex
+      }))
+    );
+
+    setEdges(
+      graph.edges.map(edge => ({
+        ...edge
+      }))
+    );
+
+    setEdgeSource('');
+    setEdgeTarget('');
+
+    setSelectedNodeId(null);
+
+    setAnalysis(null);
+    setError('');
+
+    nextVertexId.current = 1;
+    nextEdgeId.current = 1;
   }
 
   function resetGraph() {
@@ -276,6 +340,15 @@ function App() {
 
       <section className="workspace">
         <aside className="control-panel">
+          <GraphIoPanel
+              graph={{
+                vertices,
+                edges
+              }}
+              analysis={analysis}
+              onLoadGraph={loadGraph}
+              onError={setError}
+            />
           <section className="panel-section">
             <h2>
               Dodavanje čvora
