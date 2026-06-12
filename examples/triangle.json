@@ -1,0 +1,12 @@
+{
+  "vertices": [
+    { "id": "v1", "label": "A" },
+    { "id": "v2", "label": "B" },
+    { "id": "v3", "label": "C" }
+  ],
+  "edges": [
+    { "id": "e1", "source": "v1", "target": "v2" },
+    { "id": "e2", "source": "v2", "target": "v3" },
+    { "id": "e3", "source": "v3", "target": "v1" }
+  ]
+}

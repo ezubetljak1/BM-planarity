@@ -1,0 +1,8 @@
+{
+  "vertices": [
+    { "id": "v1", "label": "A" }
+  ],
+  "edges": [
+    { "id": "e1", "source": "v1", "target": "v404" }
+  ]
+}

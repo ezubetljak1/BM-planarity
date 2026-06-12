@@ -220,3 +220,60 @@ if(BM_ENABLE_DIFFERENTIAL_TESTS)
             TIMEOUT 180
     )
 endif()
+
+# Optional JSON tools used by the UI/API layer.
+option(
+    BM_ENABLE_JSON_TOOLS
+    "Build JSON input/output tools for UI and API integration"
+    OFF
+)
+
+if(BM_ENABLE_JSON_TOOLS)
+    find_package(nlohmann_json CONFIG QUIET)
+
+    if(NOT nlohmann_json_FOUND)
+        include(FetchContent)
+
+        set(JSON_BuildTests OFF CACHE INTERNAL "")
+
+        FetchContent_Declare(
+            nlohmann_json
+            URL
+                https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+            URL_HASH
+                SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+        )
+
+        FetchContent_MakeAvailable(
+            nlohmann_json
+        )
+    endif()
+
+    add_library(bm_planarity_json
+        src/io/GraphJsonAdapter.cpp
+    )
+
+    target_include_directories(
+        bm_planarity_json
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    target_link_libraries(
+        bm_planarity_json
+        PUBLIC
+            bm_planarity
+            nlohmann_json::nlohmann_json
+    )
+
+    add_executable(
+        bm_planarity_json_cli
+        tools/BmJsonCli.cpp
+    )
+
+    target_link_libraries(
+        bm_planarity_json_cli
+        PRIVATE
+            bm_planarity_json
+    )
+endif()
