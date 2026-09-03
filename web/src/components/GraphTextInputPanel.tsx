@@ -188,7 +188,7 @@ export function parseGraphText(
 
         if (sourceId === targetId) {
           throw new Error(
-            `Self-loop nije podržan u liniji ${lineNumber}: "${line}".`
+            `Petlja nije podržana u liniji ${lineNumber}: "${line}".`
           );
         }
 

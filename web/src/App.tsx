@@ -293,6 +293,19 @@ function findSubdivisionPaths(
   return subdivisionPaths;
 }
 
+function certificateTypeLabel(
+  type: KuratowskiCertificate['type']
+): string {
+  switch (type) {
+  case 'K5':
+    return 'Subdivizija K₅';
+  case 'K3_3':
+    return 'Subdivizija K₃,₃';
+  default:
+    return 'Kuratowskijeva subdivizija';
+  }
+}
+
 function App() {
   const [vertices, setVertices] =
     useState<GraphVertex[]>([]);
@@ -576,7 +589,7 @@ function App() {
 
     if (source === target) {
       setError(
-        'Self-loop grane nisu podržane.'
+        'Petlje nisu podržane.'
       );
 
       return false;
@@ -961,7 +974,7 @@ function App() {
       <header className="app-header">
         <div>
           <p className="eyebrow">
-            Boyer–Myrvold planarity
+            Boyer–Myrvold algoritam
           </p>
 
           <h1>
@@ -972,9 +985,9 @@ function App() {
           <p className="intro">
             Kreirajte graf,
             pokrenite algoritam i
-            pregledajte planar
-            embedding ili Kuratowski
-            certifikat.
+            pregledajte planarno
+            ulaganje ili Kuratowskijev
+            certifikat neplanarnosti.
           </p>
         </div>
 
@@ -1221,35 +1234,61 @@ function App() {
         </aside>
 
         <section className="canvas-panel">
-          <GraphCanvas
-            ref={graphCanvasRef}
-            vertices={vertices}
-            edges={edges}
-            selectedNodeId={
-              selectedNodeId
+          <div className="canvas-stage">
+            <GraphCanvas
+              ref={graphCanvasRef}
+              vertices={vertices}
+              edges={edges}
+              selectedNodeId={
+                selectedNodeId
+              }
+              pendingEdgeSourceId={
+                pendingEdgeSourceId
+              }
+              certificate={
+                certificate
+              }
+              positionsByVertex={
+                positionsByVertex
+              }
+              subdivisionVertexIds={
+                subdivisionVertexIds
+              }
+              onNodeTap={
+                handleCanvasNodeTap
+              }
+              onCanvasTap={
+                handleCanvasTap
+              }
+              onPositionsChange={
+                handlePositionsChange
+              }
+            />
+
+            {
+              vertices.length === 0
+              && (
+                <div className="canvas-empty-state">
+                  <div
+                    className="canvas-empty-icon"
+                    aria-hidden="true"
+                  >
+                    ○—○
+                  </div>
+
+                  <strong>
+                    Graf je prazan
+                  </strong>
+
+                  <span>
+                    Odaberite primjer ili
+                    dodajte čvorove pomoću
+                    kontrola s lijeve strane.
+                  </span>
+                </div>
+              )
             }
-            pendingEdgeSourceId={
-              pendingEdgeSourceId
-            }
-            certificate={
-              certificate
-            }
-            positionsByVertex={
-              positionsByVertex
-            }
-            subdivisionVertexIds={
-              subdivisionVertexIds
-            }
-            onNodeTap={
-              handleCanvasNodeTap
-            }
-            onCanvasTap={
-              handleCanvasTap
-            }
-            onPositionsChange={
-              handlePositionsChange
-            }
-          />
+          </div>
 
           <div className="canvas-footer">
             <span>
@@ -1321,19 +1360,20 @@ function App() {
                 </h2>
 
                 <p>
-                  Pronađen je validan
-                  planar embedding.
+                  Pronađeno je validno
+                  planarno ulaganje.
                 </p>
 
                 <h3>
-                  Clockwise rotacije
+                  Rotacijski sistem
                 </h3>
 
                 <p className="muted-text">
                   Za svaki čvor prikazan
-                  je clockwise poredak
-                  njegovih susjednih
-                  čvorova.
+                  je ciklični poredak
+                  susjednih čvorova u
+                  izračunatom planarnom
+                  ulaganju.
                 </p>
 
                 <ul className="rotation-list">
@@ -1379,6 +1419,12 @@ function App() {
                     )
                   }
                 </ul>
+
+                <p className="result-note">
+                  Grafički prikaz može biti
+                  rotiran ili zrcaljen u odnosu
+                  na zapis rotacijskog sistema.
+                </p>
               </section>
             )
           }
@@ -1394,15 +1440,18 @@ function App() {
                 </h2>
 
                 <p>
-                  Pronađen je Kuratowski
-                  certifikat:
+                  Pronađen je
+                  Kuratowskijev certifikat
+                  neplanarnosti:
                 </p>
 
                 <div className="certificate-type">
                   {
-                    analysis
-                      .certificate
-                      .type
+                    certificateTypeLabel(
+                      analysis
+                        .certificate
+                        .type
+                    )
                   }
                 </div>
 
@@ -1410,24 +1459,24 @@ function App() {
                   <li>
                     <span className="legend-dot branch" />
 
-                    Branch čvor
+                    Čvor grananja
                   </li>
 
                   <li>
                     <span className="legend-dot subdivision" />
 
-                    Subdivision čvor
+                    Subdivizijski čvor
                   </li>
 
                   <li>
                     <span className="legend-line certificate" />
 
-                    Grana certifikata
+                    Grana Kuratowskijevog podgrafa
                   </li>
                 </ul>
 
                 <h3>
-                  Branch čvorovi
+                  Čvorovi grananja
                 </h3>
 
                 <ul>
@@ -1455,7 +1504,7 @@ function App() {
                   && (
                     <>
                       <h3>
-                        Subdivision putevi
+                        Subdivizijski putevi
                       </h3>
 
                       <ul className="subdivision-path-list">
@@ -1486,9 +1535,11 @@ function App() {
                         Narandžasti čvorovi
                         nalaze se unutar
                         subdivizijskih puteva.
-                        Sažimanjem tih puteva
-                        dobija se označeni
-                        K3,3 ili K5 graf.
+                        Zamjenom svakog takvog
+                        puta jednom granom
+                        dobija se graf izomorfan
+                        sa odgovarajućim K₃,₃
+                        ili K₅ grafom.
                       </p>
                     </>
                   )
