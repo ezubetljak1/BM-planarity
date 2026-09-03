@@ -49,33 +49,28 @@ void validateContextRoot(
     }
 }
 
-BmRealExternalFacePosition findPositionOnSide(
-    const BmEmbeddingState& state,
-    int rootInternalVertexId,
-    int rootIncomingLink,
-    int targetOriginalVertex
+BmRealExternalFacePosition cachedPositionOnSide(
+    const BmKuratowskiExtractionContext& context,
+    int internalVertexId,
+    bool rxwSide
 ) {
-    BmRealExternalFaceTraversal traversal(state.partialEmbedding());
-    BmRealExternalFacePosition position = traversal.successor(
-        {rootInternalVertexId, rootIncomingLink}
-    );
+    const auto& positions = rxwSide
+        ? context.rxwPositionByInternalVertex
+        : context.rywPositionByInternalVertex;
+    const auto& present = rxwSide
+        ? context.hasRxwPositionByInternalVertex
+        : context.hasRywPositionByInternalVertex;
 
-    const int maxSteps = state.partialEmbedding().halfEdgeCount() + 1;
-
-    for (int step = 0; step < maxSteps; ++step) {
-        if (position.internalVertexId == rootInternalVertexId) {
-            break;
-        }
-
-        if (!state.isInternalBicompRootVertex(position.internalVertexId)
-            && originalVertex(state, position.internalVertexId) == targetOriginalVertex) {
-            return position;
-        }
-
-        position = traversal.successor(position);
+    if (internalVertexId < 0
+        || internalVertexId >= static_cast<int>(positions.size())
+        || internalVertexId >= static_cast<int>(present.size())
+        || !present[static_cast<std::size_t>(internalVertexId)]) {
+        throw std::logic_error(
+            "External-face side has no cached position for the requested vertex."
+        );
     }
 
-    throw std::logic_error("External-face side did not reach the requested vertex.");
+    return positions[static_cast<std::size_t>(internalVertexId)];
 }
 
 int edgeOriginalId(
@@ -143,10 +138,17 @@ void BmKuratowskiInternalPathAnalyzer::classifyExternalFaceVertices(
     const BmPartialEmbedding& embedding = state.partialEmbedding();
     BmRealExternalFaceTraversal traversal(embedding);
 
+    const std::size_t internalVertexCount =
+        static_cast<std::size_t>(embedding.internalVertexCount());
+
     context.obstructionMarksByInternalVertex.assign(
-        static_cast<std::size_t>(embedding.internalVertexCount()),
+        internalVertexCount,
         Mark::Unmarked
     );
+    context.rxwPositionByInternalVertex.assign(internalVertexCount, {});
+    context.rywPositionByInternalVertex.assign(internalVertexCount, {});
+    context.hasRxwPositionByInternalVertex.assign(internalVertexCount, false);
+    context.hasRywPositionByInternalVertex.assign(internalVertexCount, false);
 
     // Traverse R -> ... -> X -> ... -> W.
     BmRealExternalFacePosition position = traversal.successor(
@@ -162,9 +164,15 @@ void BmKuratowskiInternalPathAnalyzer::classifyExternalFaceVertices(
             mark = Mark::LowRxw;
         }
 
-        context.obstructionMarksByInternalVertex[
-            static_cast<std::size_t>(position.internalVertexId)
-        ] = mark;
+        const std::size_t internalVertexIndex =
+            static_cast<std::size_t>(position.internalVertexId);
+
+        context.obstructionMarksByInternalVertex[internalVertexIndex] = mark;
+
+        if (!context.hasRxwPositionByInternalVertex[internalVertexIndex]) {
+            context.rxwPositionByInternalVertex[internalVertexIndex] = position;
+            context.hasRxwPositionByInternalVertex[internalVertexIndex] = true;
+        }
 
         position = traversal.successor(position);
 
@@ -185,9 +193,15 @@ void BmKuratowskiInternalPathAnalyzer::classifyExternalFaceVertices(
             mark = Mark::LowRyw;
         }
 
-        context.obstructionMarksByInternalVertex[
-            static_cast<std::size_t>(position.internalVertexId)
-        ] = mark;
+        const std::size_t internalVertexIndex =
+            static_cast<std::size_t>(position.internalVertexId);
+
+        context.obstructionMarksByInternalVertex[internalVertexIndex] = mark;
+
+        if (!context.hasRywPositionByInternalVertex[internalVertexIndex]) {
+            context.rywPositionByInternalVertex[internalVertexIndex] = position;
+            context.hasRywPositionByInternalVertex[internalVertexIndex] = true;
+        }
 
         position = traversal.successor(position);
 
@@ -203,7 +217,9 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
 ) {
     validateContextRoot(state, context);
 
-    if (context.obstructionMarksByInternalVertex.empty()) {
+    if (context.obstructionMarksByInternalVertex.empty()
+        || context.rxwPositionByInternalVertex.empty()
+        || context.rywPositionByInternalVertex.empty()) {
         classifyExternalFaceVertices(state, context);
     }
 
@@ -277,11 +293,10 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
 
             if (isRxw(vertexMark)) {
                 context.px = originalVertex(state, nextVertex);
-                context.pxPosition = findPositionOnSide(
-                    state,
-                    root,
-                    1,
-                    context.px
+                context.pxPosition = cachedPositionOnSide(
+                    context,
+                    nextVertex,
+                    true
                 );
 
                 for (int vertex : stackVertices) {
@@ -298,11 +313,10 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
 
             if (isRyw(vertexMark)) {
                 context.py = originalVertex(state, nextVertex);
-                context.pyPosition = findPositionOnSide(
-                    state,
-                    root,
-                    0,
-                    context.py
+                context.pyPosition = cachedPositionOnSide(
+                    context,
+                    nextVertex,
+                    false
                 );
                 break;
             }
