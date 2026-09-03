@@ -1,12 +1,17 @@
 import {
   useRef,
+  useState,
   type ChangeEvent
 } from 'react';
 
 import {
-  k33Example,
-  triangleExample
+  graphExamples,
+  type GraphExample
 } from '../examples';
+
+import {
+  GraphExampleModal
+} from './GraphExampleModal';
 
 import type {
   AnalysisSuccessResponse,
@@ -150,6 +155,11 @@ export function GraphIoPanel({
       null
     );
 
+  const [
+    examplesOpen,
+    setExamplesOpen
+  ] = useState(false);
+
   async function handleImport(
     event:
       ChangeEvent<HTMLInputElement>
@@ -189,41 +199,39 @@ export function GraphIoPanel({
     }
   }
 
+  function handleExampleSelect(
+    example: GraphExample
+  ) {
+    onLoadGraph(
+      cloneGraph(
+        example.graph
+      )
+    );
+
+    setExamplesOpen(false);
+  }
+
   return (
     <section className="panel-section">
       <h2>
-        Primjeri i JSON
+        Primjeri
       </h2>
 
-      <div className="button-grid">
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() =>
-            onLoadGraph(
-              cloneGraph(
-                triangleExample
-              )
-            )
-          }
-        >
-          Učitaj trougao
-        </button>
+      <button
+        className="secondary-button full-width-button"
+        type="button"
+        onClick={() =>
+          setExamplesOpen(true)
+        }
+      >
+        Odaberi primjer grafa
+      </button>
 
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() =>
-            onLoadGraph(
-              cloneGraph(
-                k33Example
-              )
-            )
-          }
-        >
-          Učitaj K3,3
-        </button>
+      <h3 className="panel-subheading">
+        Uvoz i izvoz
+      </h3>
 
+      <div className="io-actions">
         <button
           className="secondary-button"
           type="button"
@@ -236,54 +244,65 @@ export function GraphIoPanel({
           Uvezi JSON
         </button>
 
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() =>
-            downloadJson(
-              'graph-input.json',
-              graph
-            )
-          }
-        >
-          Izvezi ulazni JSON
-        </button>
+        <details className="export-menu">
+          <summary className="secondary-button export-menu-trigger">
+            Izvezi
+            <span aria-hidden="true">
+              ▾
+            </span>
+          </summary>
 
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={!analysis}
-          onClick={() => {
-            if (!analysis) {
-              return;
-            }
+          <div className="export-menu-content">
+            <button
+              type="button"
+              onClick={() =>
+                downloadJson(
+                  'graph-input.json',
+                  graph
+                )
+              }
+            >
+              Ulazni graf kao JSON
+            </button>
 
-            downloadJson(
-              'graph-analysis-result.json',
-              analysis
-            );
-          }}
-        >
-          Izvezi rezultat
-        </button>
+            <button
+              type="button"
+              disabled={!analysis}
+              onClick={() => {
+                if (!analysis) {
+                  return;
+                }
 
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={graph.vertices.length === 0}
-          onClick={onExportPng}
-        >
-          Izvezi PNG
-        </button>
+                downloadJson(
+                  'graph-analysis-result.json',
+                  analysis
+                );
+              }}
+            >
+              Rezultat analize kao JSON
+            </button>
 
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={graph.vertices.length === 0}
-          onClick={onExportSvg}
-        >
-          Izvezi SVG
-        </button>
+            <button
+              type="button"
+              disabled={
+                graph.vertices.length === 0
+              }
+              onClick={onExportPng}
+            >
+              Vizualizacija kao PNG
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                graph.vertices.length === 0
+              }
+              onClick={onExportSvg}
+            >
+              Vizualizacija kao SVG
+            </button>
+          </div>
+        </details>
       </div>
 
       <input
@@ -292,6 +311,15 @@ export function GraphIoPanel({
         type="file"
         accept="application/json,.json"
         onChange={handleImport}
+      />
+
+      <GraphExampleModal
+        open={examplesOpen}
+        examples={graphExamples}
+        onClose={() =>
+          setExamplesOpen(false)
+        }
+        onSelect={handleExampleSelect}
       />
     </section>
   );
