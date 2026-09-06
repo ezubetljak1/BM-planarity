@@ -52,7 +52,7 @@ void BmEmbeddingValidator::validatePartialEmbedding(const BmPartialEmbedding& em
                 "Twin half-edge endpoints are inconsistent.");
     }
 
-    std::vector<int> adjacencyOwner(static_cast<std::size_t>(halfEdgeCount), -1);
+    std::vector<int> adjacencyOwner(halfEdgeCount, -1);
 
     for (int vertexId = 0; vertexId < internalVertexCount; ++vertexId) {
         const BmInternalVertex& vertex = embedding.internalVertex(vertexId);
@@ -76,10 +76,10 @@ void BmEmbeddingValidator::validatePartialEmbedding(const BmPartialEmbedding& em
 
         do {
             require(validIndex(current, halfEdgeCount), "Adjacency list contains invalid half-edge.");
-            require(adjacencyOwner[static_cast<std::size_t>(current)] == -1,
+            require(adjacencyOwner[current] == -1,
                     "Half-edge appears multiple times in circular adjacency lists.");
 
-            adjacencyOwner[static_cast<std::size_t>(current)] = vertexId;
+            adjacencyOwner[current] = vertexId;
 
             const BmHalfEdge& edge = embedding.halfEdge(current);
 
@@ -104,7 +104,7 @@ void BmEmbeddingValidator::validatePartialEmbedding(const BmPartialEmbedding& em
             const int anchor = vertex.externalFaceHalfEdges[side];
 
             require(validIndex(anchor, halfEdgeCount), "External-face anchor is invalid.");
-            require(adjacencyOwner[static_cast<std::size_t>(anchor)] == vertexId,
+            require(adjacencyOwner[anchor] == vertexId,
                     "External-face anchor is not incident to its vertex.");
         }
     }
@@ -120,7 +120,7 @@ void BmEmbeddingValidator::validatePartialEmbedding(const BmPartialEmbedding& em
                 "Half-edge twin relation is not symmetric.");
         require(validIndex(halfEdge.from, internalVertexCount), "Half-edge source vertex is invalid.");
         require(validIndex(halfEdge.to, internalVertexCount), "Half-edge target vertex is invalid.");
-        require(adjacencyOwner[static_cast<std::size_t>(halfEdgeId)] == halfEdge.from,
+        require(adjacencyOwner[halfEdgeId] == halfEdge.from,
                 "Half-edge is missing from the source adjacency list.");
     }
 

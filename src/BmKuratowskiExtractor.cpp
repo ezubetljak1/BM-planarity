@@ -57,8 +57,8 @@ int vertexWithLowestDfi(
         vertices.begin(),
         vertices.end(),
         [&](int first, int second) {
-            return dfsInfo.dfsIndex[static_cast<std::size_t>(first)]
-                < dfsInfo.dfsIndex[static_cast<std::size_t>(second)];
+            return dfsInfo.dfsIndex[first]
+                < dfsInfo.dfsIndex[second];
         }
     );
 }
@@ -71,8 +71,8 @@ int vertexWithHighestDfi(
         vertices.begin(),
         vertices.end(),
         [&](int first, int second) {
-            return dfsInfo.dfsIndex[static_cast<std::size_t>(first)]
-                < dfsInfo.dfsIndex[static_cast<std::size_t>(second)];
+            return dfsInfo.dfsIndex[first]
+                < dfsInfo.dfsIndex[second];
         }
     );
 }
@@ -82,8 +82,8 @@ bool hasLowerDfi(
     int first,
     int second
 ) {
-    return dfsInfo.dfsIndex[static_cast<std::size_t>(first)]
-        < dfsInfo.dfsIndex[static_cast<std::size_t>(second)];
+    return dfsInfo.dfsIndex[first]
+        < dfsInfo.dfsIndex[second];
 }
 
 void markConnection(
@@ -215,7 +215,7 @@ Mark obstructionMark(
     int originalVertexId
 ) {
     return context.obstructionMarksByInternalVertex[
-        static_cast<std::size_t>(internalVertex(state, originalVertexId))
+        internalVertex(state, originalVertexId)
     ];
 }
 
@@ -306,7 +306,7 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorB(
     }
 
     const int subtreeRoot = state.bicompRoot(roots.back()).childVertex;
-    const int uz = state.dfsInfo().lowpointVertex[static_cast<std::size_t>(subtreeRoot)];
+    const int uz = state.dfsInfo().lowpointVertex[subtreeRoot];
 
     const BmOriginalBackEdgeConnection uxDx = requireConnection(
         BmKuratowskiConnectionFinder::findToAncestor(state, context.currentVertex, x),
@@ -437,12 +437,12 @@ KuratowskiCertificate BmKuratowskiExtractor::isolateMinorE(
         if (zMark == Mark::LowRxw) {
             reduced.x.internalVertexId = internalVertex(state, context.z);
             reduced.obstructionMarksByInternalVertex[
-                static_cast<std::size_t>(internalVertex(state, context.px))
+                internalVertex(state, context.px)
             ] = Mark::HighRxw;
         } else if (zMark == Mark::LowRyw) {
             reduced.y.internalVertexId = internalVertex(state, context.z);
             reduced.obstructionMarksByInternalVertex[
-                static_cast<std::size_t>(internalVertex(state, context.py))
+                internalVertex(state, context.py)
             ] = Mark::HighRyw;
         } else {
             throw std::logic_error("Minor E1 requires Z on a low external-face segment.");

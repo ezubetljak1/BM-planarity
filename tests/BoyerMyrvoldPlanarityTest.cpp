@@ -232,14 +232,15 @@ BM_TEST(BoyerMyrvoldExhaustivelyChecksAllFiveVertexGraphs) {
         }
     }
 
-    const int graphCount = 1 << static_cast<int>(possibleEdges.size());
+    const int possibleEdgeCount = possibleEdges.size();
+    const int graphCount = 1 << possibleEdgeCount;
 
     BoyerMyrvoldPlanarity algorithm;
 
     for (int mask = 0; mask < graphCount; ++mask) {
         Graph graph(vertexCount);
 
-        for (int edgeIndex = 0; edgeIndex < static_cast<int>(possibleEdges.size()); ++edgeIndex) {
+        for (int edgeIndex = 0; edgeIndex < possibleEdgeCount; ++edgeIndex) {
             if ((mask & (1 << edgeIndex)) != 0) {
                 graph.addEdge(possibleEdges[edgeIndex].u, possibleEdges[edgeIndex].v);
             }

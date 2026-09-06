@@ -15,9 +15,9 @@ BmEmbeddingState makeTreeState(const Graph& graph, const DfsInfo& dfsInfo) {
     BmEmbeddingState state(graph, dfsInfo);
 
     for (int dfi = dfsInfo.vertexCount - 1; dfi >= 0; --dfi) {
-        const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(dfi)];
+        const int vertex = dfsInfo.vertexAtDfsIndex[dfi];
 
-        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+        for (int child : dfsInfo.children[vertex]) {
             state.createTreeEdgeBicomp(vertex, child);
         }
     }

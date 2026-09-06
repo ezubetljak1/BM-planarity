@@ -61,16 +61,19 @@ BmRealExternalFacePosition cachedPositionOnSide(
         ? context.hasRxwPositionByInternalVertex
         : context.hasRywPositionByInternalVertex;
 
+    const int positionCount = positions.size();
+    const int presentCount = present.size();
+
     if (internalVertexId < 0
-        || internalVertexId >= static_cast<int>(positions.size())
-        || internalVertexId >= static_cast<int>(present.size())
-        || !present[static_cast<std::size_t>(internalVertexId)]) {
+        || internalVertexId >= positionCount
+        || internalVertexId >= presentCount
+        || !present[internalVertexId]) {
         throw std::logic_error(
             "External-face side has no cached position for the requested vertex."
         );
     }
 
-    return positions[static_cast<std::size_t>(internalVertexId)];
+    return positions[internalVertexId];
 }
 
 int edgeOriginalId(
@@ -138,8 +141,7 @@ void BmKuratowskiInternalPathAnalyzer::classifyExternalFaceVertices(
     const BmPartialEmbedding& embedding = state.partialEmbedding();
     BmRealExternalFaceTraversal traversal(embedding);
 
-    const std::size_t internalVertexCount =
-        static_cast<std::size_t>(embedding.internalVertexCount());
+    const int internalVertexCount = embedding.internalVertexCount();
 
     context.obstructionMarksByInternalVertex.assign(
         internalVertexCount,
@@ -164,8 +166,7 @@ void BmKuratowskiInternalPathAnalyzer::classifyExternalFaceVertices(
             mark = Mark::LowRxw;
         }
 
-        const std::size_t internalVertexIndex =
-            static_cast<std::size_t>(position.internalVertexId);
+        const int internalVertexIndex = position.internalVertexId;
 
         context.obstructionMarksByInternalVertex[internalVertexIndex] = mark;
 
@@ -193,8 +194,7 @@ void BmKuratowskiInternalPathAnalyzer::classifyExternalFaceVertices(
             mark = Mark::LowRyw;
         }
 
-        const std::size_t internalVertexIndex =
-            static_cast<std::size_t>(position.internalVertexId);
+        const int internalVertexIndex = position.internalVertexId;
 
         context.obstructionMarksByInternalVertex[internalVertexIndex] = mark;
 
@@ -237,7 +237,7 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
     std::vector<int> stackVertices;
     std::vector<int> stackEntryHalfEdges;
     std::vector<int> stackIndexByInternalVertex(
-        static_cast<std::size_t>(embedding.internalVertexCount()),
+        embedding.internalVertexCount(),
         -1
     );
 
@@ -274,22 +274,16 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
             return;
         }
 
-        const int existingIndex = stackIndexByInternalVertex[
-            static_cast<std::size_t>(nextVertex)
-        ];
+        const int existingIndex = stackIndexByInternalVertex[nextVertex];
 
         if (existingIndex != -1) {
-            while (static_cast<int>(stackVertices.size()) - 1 > existingIndex) {
-                stackIndexByInternalVertex[
-                    static_cast<std::size_t>(stackVertices.back())
-                ] = -1;
+            while (stackVertices.back() != nextVertex) {
+                stackIndexByInternalVertex[stackVertices.back()] = -1;
                 stackVertices.pop_back();
                 stackEntryHalfEdges.pop_back();
             }
         } else {
-            const Mark vertexMark = context.obstructionMarksByInternalVertex[
-                static_cast<std::size_t>(nextVertex)
-            ];
+            const Mark vertexMark = context.obstructionMarksByInternalVertex[nextVertex];
 
             if (isRxw(vertexMark)) {
                 context.px = originalVertex(state, nextVertex);
@@ -300,14 +294,13 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
                 );
 
                 for (int vertex : stackVertices) {
-                    stackIndexByInternalVertex[static_cast<std::size_t>(vertex)] = -1;
+                    stackIndexByInternalVertex[vertex] = -1;
                 }
                 stackVertices.clear();
                 stackEntryHalfEdges.clear();
             }
 
-            stackIndexByInternalVertex[static_cast<std::size_t>(nextVertex)] =
-                static_cast<int>(stackVertices.size());
+            stackIndexByInternalVertex[nextVertex] = stackVertices.size();
             stackVertices.push_back(nextVertex);
             stackEntryHalfEdges.push_back(nextEntryHalfEdge);
 
@@ -335,7 +328,8 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
     // omitted. Every subsequent entry edge belongs to the internal X-Y path.
     bool skippedPx = false;
 
-    for (std::size_t index = 0; index < stackVertices.size(); ++index) {
+    const int stackVertexCount = stackVertices.size();
+    for (int index = 0; index < stackVertexCount; ++index) {
         const int vertex = stackVertices[index];
 
         if (!skippedPx && originalVertex(state, vertex) == context.px) {
@@ -367,26 +361,24 @@ void BmKuratowskiInternalPathAnalyzer::findZToRootPath(
     }
 
     const BmPartialEmbedding& embedding = state.partialEmbedding();
-    std::vector<bool> xyEdge(
-        static_cast<std::size_t>(embedding.embeddedEdgeCount()),
-        false
-    );
+    std::vector<bool> xyEdge(embedding.embeddedEdgeCount(), false);
 
     for (int halfEdgeId : context.xyPathHalfEdgeIds) {
         const int edgeId = embedding.halfEdge(halfEdgeId).embeddedEdgeId;
-        xyEdge[static_cast<std::size_t>(edgeId)] = true;
+        xyEdge[edgeId] = true;
     }
 
     // The stored half-edges are directed entries into successive vertices on
     // P_x -> P_y. For every internal X-Y vertex, inspect the predecessor edge
     // above the path. If it is not the next marked X-Y edge, it starts Z -> R.
-    for (std::size_t index = 0; index + 1 < context.xyPathHalfEdgeIds.size(); ++index) {
+    const int xyPathEdgeCount = context.xyPathHalfEdgeIds.size();
+    for (int index = 0; index + 1 < xyPathEdgeCount; ++index) {
         const int entryHalfEdge = context.xyPathHalfEdgeIds[index];
         const int vertex = embedding.halfEdge(entryHalfEdge).from;
         const int candidate = embedding.previousAroundVertex(entryHalfEdge);
         const int candidateEdge = embedding.halfEdge(candidate).embeddedEdgeId;
 
-        if (xyEdge[static_cast<std::size_t>(candidateEdge)]) {
+        if (xyEdge[candidateEdge]) {
             continue;
         }
 

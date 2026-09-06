@@ -41,20 +41,20 @@ bool inspectFirstFailure(const Graph& graph, Consumer&& consume) {
     BmWalkdown walkdown;
 
     for (int dfi = dfsInfo.vertexCount - 1; dfi >= 0; --dfi) {
-        const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(dfi)];
+        const int vertex = dfsInfo.vertexAtDfsIndex[dfi];
 
-        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+        for (int child : dfsInfo.children[vertex]) {
             state.createTreeEdgeBicomp(vertex, child);
         }
 
         for (int backEdgeIndex :
-             dfsInfo.backEdgeIndicesFromAncestor[static_cast<std::size_t>(vertex)]) {
+             dfsInfo.backEdgeIndicesFromAncestor[vertex]) {
             const DfsBackEdge& backEdge =
-                dfsInfo.backEdges[static_cast<std::size_t>(backEdgeIndex)];
+                dfsInfo.backEdges[backEdgeIndex];
             walkup.run(state, vertex, backEdge.descendant, backEdge.edgeId);
         }
 
-        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+        for (int child : dfsInfo.children[vertex]) {
             if (!state.hasPertinentRoots(child)) {
                 continue;
             }
@@ -73,9 +73,9 @@ bool inspectFirstFailure(const Graph& graph, Consumer&& consume) {
         }
 
         for (int backEdgeIndex :
-             dfsInfo.backEdgeIndicesFromAncestor[static_cast<std::size_t>(vertex)]) {
+             dfsInfo.backEdgeIndicesFromAncestor[vertex]) {
             const DfsBackEdge& backEdge =
-                dfsInfo.backEdges[static_cast<std::size_t>(backEdgeIndex)];
+                dfsInfo.backEdges[backEdgeIndex];
 
             if (!state.isOriginalEdgeEmbedded(backEdge.edgeId)) {
                 consume(

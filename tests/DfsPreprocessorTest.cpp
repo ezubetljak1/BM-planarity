@@ -112,7 +112,8 @@ BM_TEST(DfsPreprocessorHandlesDeepPathWithoutRecursion) {
     const DfsInfo dfsInfo = preprocessor.run(graph);
 
     BM_ASSERT(dfsInfo.vertexCount == vertexCount);
-    BM_ASSERT(dfsInfo.treeEdgeIds.size() == static_cast<std::size_t>(vertexCount - 1));
+    const int treeEdgeCount = dfsInfo.treeEdgeIds.size();
+    BM_ASSERT(treeEdgeCount == vertexCount - 1);
     BM_ASSERT(dfsInfo.backEdges.empty());
     BM_ASSERT(dfsInfo.parent[vertexCount - 1] == vertexCount - 2);
 }

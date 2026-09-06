@@ -42,99 +42,101 @@ void PlanarEmbeddingValidator::validate(const Graph& graph, const PlanarEmbeddin
     const int vertexCount = graph.vertexCount();
     const int edgeCount = graph.edgeCount();
 
-    require(static_cast<int>(embedding.clockwiseEdgesAroundVertex.size()) == vertexCount,
+    const int embeddingVertexCount = embedding.clockwiseEdgesAroundVertex.size();
+    require(embeddingVertexCount == vertexCount,
             "Rotation system must contain one adjacency order for every graph vertex.");
 
     std::vector<std::array<int, 2>> positionByEndpoint(
-        static_cast<std::size_t>(edgeCount), std::array<int, 2>{-1, -1});
+        edgeCount, std::array<int, 2>{-1, -1});
 
-    std::vector<int> occurrenceCount(static_cast<std::size_t>(edgeCount), 0);
+    std::vector<int> occurrenceCount(edgeCount, 0);
 
     for (int vertex = 0; vertex < vertexCount; ++vertex) {
-        const auto& rotation = embedding.clockwiseEdgesAroundVertex[static_cast<std::size_t>(vertex)];
-        const auto& adjacency = graph.adjacencyEdgeIds()[static_cast<std::size_t>(vertex)];
+        const auto& rotation = embedding.clockwiseEdgesAroundVertex[vertex];
+        const auto& adjacency = graph.adjacencyEdgeIds()[vertex];
 
         require(rotation.size() == adjacency.size(),
                 "Rotation-system degree does not match graph degree.");
 
-        for (int position = 0; position < static_cast<int>(rotation.size()); ++position) {
-            const int edgeId = rotation[static_cast<std::size_t>(position)];
+        const int rotationSize = rotation.size();
+        for (int position = 0; position < rotationSize; ++position) {
+            const int edgeId = rotation[position];
 
             require(edgeId >= 0 && edgeId < edgeCount,
                     "Rotation system contains an invalid original edge id.");
 
             const Edge& edge = graph.edge(edgeId);
             const int side = endpointSide(edge, vertex);
-            int& storedPosition = positionByEndpoint[static_cast<std::size_t>(edgeId)][side];
+            int& storedPosition = positionByEndpoint[edgeId][side];
 
             require(storedPosition == -1,
                     "Rotation system contains an edge more than once around one endpoint.");
 
             storedPosition = position;
-            ++occurrenceCount[static_cast<std::size_t>(edgeId)];
+            ++occurrenceCount[edgeId];
         }
     }
 
     for (int edgeId = 0; edgeId < edgeCount; ++edgeId) {
-        require(occurrenceCount[static_cast<std::size_t>(edgeId)] == 2,
+        require(occurrenceCount[edgeId] == 2,
                 "Every original edge must appear exactly once around each endpoint.");
-        require(positionByEndpoint[static_cast<std::size_t>(edgeId)][0] != -1
-                    && positionByEndpoint[static_cast<std::size_t>(edgeId)][1] != -1,
+        require(positionByEndpoint[edgeId][0] != -1
+                    && positionByEndpoint[edgeId][1] != -1,
                 "Every original edge must appear around both endpoints.");
     }
 
-    std::vector<int> componentOfVertex(static_cast<std::size_t>(vertexCount), -1);
+    std::vector<int> componentOfVertex(vertexCount, -1);
     std::vector<int> verticesPerComponent;
     std::vector<int> edgesPerComponent;
 
     for (int start = 0; start < vertexCount; ++start) {
-        if (componentOfVertex[static_cast<std::size_t>(start)] != -1) {
+        if (componentOfVertex[start] != -1) {
             continue;
         }
 
-        const int component = static_cast<int>(verticesPerComponent.size());
+        const int component = verticesPerComponent.size();
         verticesPerComponent.push_back(0);
         edgesPerComponent.push_back(0);
 
         std::deque<int> queue;
         queue.push_back(start);
-        componentOfVertex[static_cast<std::size_t>(start)] = component;
+        componentOfVertex[start] = component;
 
         while (!queue.empty()) {
             const int vertex = queue.front();
             queue.pop_front();
 
-            ++verticesPerComponent[static_cast<std::size_t>(component)];
-            edgesPerComponent[static_cast<std::size_t>(component)] +=
-                static_cast<int>(graph.adjacencyEdgeIds()[static_cast<std::size_t>(vertex)].size());
+            ++verticesPerComponent[component];
+            edgesPerComponent[component] +=
+                graph.adjacencyEdgeIds()[vertex].size();
 
-            for (int edgeId : graph.adjacencyEdgeIds()[static_cast<std::size_t>(vertex)]) {
+            for (int edgeId : graph.adjacencyEdgeIds()[vertex]) {
                 const int neighbor = graph.opposite(edgeId, vertex);
 
-                if (componentOfVertex[static_cast<std::size_t>(neighbor)] == -1) {
-                    componentOfVertex[static_cast<std::size_t>(neighbor)] = component;
+                if (componentOfVertex[neighbor] == -1) {
+                    componentOfVertex[neighbor] = component;
                     queue.push_back(neighbor);
                 }
             }
         }
 
-        edgesPerComponent[static_cast<std::size_t>(component)] /= 2;
+        edgesPerComponent[component] /= 2;
     }
 
-    std::vector<bool> visitedDart(static_cast<std::size_t>(2 * edgeCount), false);
+    std::vector<bool> visitedDart(2 * edgeCount, false);
     std::vector<int> faceCyclesPerComponent(verticesPerComponent.size(), 0);
 
     for (int startEdgeId = 0; startEdgeId < edgeCount; ++startEdgeId) {
         for (int startSide = 0; startSide <= 1; ++startSide) {
             const int startDart = 2 * startEdgeId + startSide;
 
-            if (visitedDart[static_cast<std::size_t>(startDart)]) {
+            if (visitedDart[startDart]) {
                 continue;
             }
 
-            const int component = componentOfVertex[static_cast<std::size_t>(
-                sourceVertex(graph.edge(startEdgeId), startSide))];
-            ++faceCyclesPerComponent[static_cast<std::size_t>(component)];
+            const int component = componentOfVertex[
+                sourceVertex(graph.edge(startEdgeId), startSide)];
+            ++faceCyclesPerComponent[component];
 
             int edgeId = startEdgeId;
             int side = startSide;
@@ -142,23 +144,23 @@ void PlanarEmbeddingValidator::validate(const Graph& graph, const PlanarEmbeddin
 
             do {
                 const int dart = 2 * edgeId + side;
-                require(!visitedDart[static_cast<std::size_t>(dart)],
+                require(!visitedDart[dart],
                         "Face traversal entered an already visited dart before closing its cycle.");
-                visitedDart[static_cast<std::size_t>(dart)] = true;
+                visitedDart[dart] = true;
 
                 const Edge& edge = graph.edge(edgeId);
                 const int target = targetVertex(edge, side);
                 const auto& targetRotation =
-                    embedding.clockwiseEdgesAroundVertex[static_cast<std::size_t>(target)];
+                    embedding.clockwiseEdgesAroundVertex[target];
                 const int targetSide = endpointSide(edge, target);
-                const int position = positionByEndpoint[static_cast<std::size_t>(edgeId)][targetSide];
+                const int position = positionByEndpoint[edgeId][targetSide];
 
                 require(!targetRotation.empty(),
                         "A dart cannot arrive at a vertex with an empty rotation order.");
 
                 const int nextPosition =
-                    (position + 1) % static_cast<int>(targetRotation.size());
-                edgeId = targetRotation[static_cast<std::size_t>(nextPosition)];
+                    (position + 1) % targetRotation.size();
+                edgeId = targetRotation[nextPosition];
                 side = endpointSide(graph.edge(edgeId), target);
 
                 ++steps;
@@ -168,12 +170,13 @@ void PlanarEmbeddingValidator::validate(const Graph& graph, const PlanarEmbeddin
         }
     }
 
-    for (int component = 0; component < static_cast<int>(verticesPerComponent.size()); ++component) {
-        const int vertices = verticesPerComponent[static_cast<std::size_t>(component)];
-        const int edges = edgesPerComponent[static_cast<std::size_t>(component)];
+    const int componentCount = verticesPerComponent.size();
+    for (int component = 0; component < componentCount; ++component) {
+        const int vertices = verticesPerComponent[component];
+        const int edges = edgesPerComponent[component];
         const int faces = edges == 0
                               ? 1
-                              : faceCyclesPerComponent[static_cast<std::size_t>(component)];
+                              : faceCyclesPerComponent[component];
 
         require(vertices - edges + faces == 2,
                 "Rotation system does not describe a planar embedding of a connected component.");

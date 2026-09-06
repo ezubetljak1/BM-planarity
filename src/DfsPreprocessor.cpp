@@ -1,6 +1,5 @@
 #include "bm/DfsPreprocessor.hpp"
 
-#include <cstddef>
 #include <stdexcept>
 #include <vector>
 
@@ -59,7 +58,7 @@ void DfsPreprocessor::initialize() {
 void DfsPreprocessor::dfs(int startVertex, int componentId) {
     struct DfsFrame {
         int vertex = -1;
-        std::size_t nextAdjacencyIndex = 0;
+        int nextAdjacencyIndex = 0;
     };
 
     const auto& adjacency = graph_->adjacencyEdgeIds();
@@ -88,7 +87,9 @@ void DfsPreprocessor::dfs(int startVertex, int componentId) {
         DfsFrame& frame = stack.back();
         const int vertex = frame.vertex;
 
-        if (frame.nextAdjacencyIndex >= adjacency[vertex].size()) {
+        const int adjacencySize = adjacency[vertex].size();
+
+        if (frame.nextAdjacencyIndex >= adjacencySize) {
             info_.subtreeEndDfi[vertex] = nextDfsIndex_ - 1;
             stack.pop_back();
 
