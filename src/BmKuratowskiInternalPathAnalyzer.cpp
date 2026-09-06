@@ -277,7 +277,7 @@ void BmKuratowskiInternalPathAnalyzer::findHighestXyPath(
         const int existingIndex = stackIndexByInternalVertex[nextVertex];
 
         if (existingIndex != -1) {
-            while (stackVertices.back() != nextVertex) {
+            while (stackVertices.size() - 1 > existingIndex) {
                 stackIndexByInternalVertex[stackVertices.back()] = -1;
                 stackVertices.pop_back();
                 stackEntryHalfEdges.pop_back();
