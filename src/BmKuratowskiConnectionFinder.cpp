@@ -14,14 +14,14 @@ std::vector<bool> allowedSeparatedDescendants(
     const DfsInfo& dfsInfo = state.dfsInfo();
     const int n = dfsInfo.vertexCount;
 
-    std::vector<int> difference(static_cast<std::size_t>(n + 1), 0);
+    std::vector<int> difference(n + 1, 0);
 
     const auto markInterval = [&](int root) {
-        const int begin = dfsInfo.dfsIndex[static_cast<std::size_t>(root)];
-        const int end = dfsInfo.subtreeEndDfi[static_cast<std::size_t>(root)];
+        const int begin = dfsInfo.dfsIndex[root];
+        const int end = dfsInfo.subtreeEndDfi[root];
 
-        ++difference[static_cast<std::size_t>(begin)];
-        --difference[static_cast<std::size_t>(end + 1)];
+        ++difference[begin];
+        --difference[end + 1];
     };
 
     // A future-pertinent connection may be direct from the cut vertex or
@@ -33,19 +33,19 @@ std::vector<bool> allowedSeparatedDescendants(
         markInterval(child);
     }
 
-    std::vector<bool> allowed(static_cast<std::size_t>(n), false);
+    std::vector<bool> allowed(n, false);
     int active = 0;
 
     for (int dfi = 0; dfi < n; ++dfi) {
-        active += difference[static_cast<std::size_t>(dfi)];
+        active += difference[dfi];
 
         if (active > 0) {
-            const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(dfi)];
-            allowed[static_cast<std::size_t>(vertex)] = true;
+            const int vertex = dfsInfo.vertexAtDfsIndex[dfi];
+            allowed[vertex] = true;
         }
     }
 
-    allowed[static_cast<std::size_t>(cutVertex)] = true;
+    allowed[cutVertex] = true;
     return allowed;
 }
 
@@ -70,8 +70,8 @@ BmKuratowskiConnectionFinder::findToSubtree(
         }
 
         if (!result.has_value()
-            || dfsInfo.dfsIndex[static_cast<std::size_t>(edge.descendant)]
-                < dfsInfo.dfsIndex[static_cast<std::size_t>(result->descendantVertex)]) {
+            || dfsInfo.dfsIndex[edge.descendant]
+                < dfsInfo.dfsIndex[result->descendantVertex]) {
             result = BmOriginalBackEdgeConnection{
                 edge.edgeId,
                 edge.ancestor,
@@ -125,19 +125,19 @@ BmKuratowskiConnectionFinder::findToAncestor(
 
     const DfsInfo& dfsInfo = state.dfsInfo();
     const std::vector<bool> allowed = allowedSeparatedDescendants(state, cutVertex);
-    const int currentDfi = dfsInfo.dfsIndex[static_cast<std::size_t>(currentVertex)];
+    const int currentDfi = dfsInfo.dfsIndex[currentVertex];
 
     std::optional<BmOriginalBackEdgeConnection> result;
 
     for (const DfsBackEdge& edge : dfsInfo.backEdges) {
-        if (dfsInfo.dfsIndex[static_cast<std::size_t>(edge.ancestor)] >= currentDfi
-            || !allowed[static_cast<std::size_t>(edge.descendant)]) {
+        if (dfsInfo.dfsIndex[edge.ancestor] >= currentDfi
+            || !allowed[edge.descendant]) {
             continue;
         }
 
         if (!result.has_value()
-            || dfsInfo.dfsIndex[static_cast<std::size_t>(edge.ancestor)]
-                < dfsInfo.dfsIndex[static_cast<std::size_t>(result->ancestorVertex)]) {
+            || dfsInfo.dfsIndex[edge.ancestor]
+                < dfsInfo.dfsIndex[result->ancestorVertex]) {
             result = BmOriginalBackEdgeConnection{
                 edge.edgeId,
                 edge.ancestor,
@@ -159,9 +159,9 @@ bool BmKuratowskiConnectionFinder::isInSubtree(
         throw std::out_of_range("Invalid DFS vertex id.");
     }
 
-    const int subtreeBegin = dfsInfo.dfsIndex[static_cast<std::size_t>(subtreeRootVertex)];
-    const int subtreeEnd = dfsInfo.subtreeEndDfi[static_cast<std::size_t>(subtreeRootVertex)];
-    const int vertexDfi = dfsInfo.dfsIndex[static_cast<std::size_t>(vertex)];
+    const int subtreeBegin = dfsInfo.dfsIndex[subtreeRootVertex];
+    const int subtreeEnd = dfsInfo.subtreeEndDfi[subtreeRootVertex];
+    const int vertexDfi = dfsInfo.dfsIndex[vertex];
 
     return subtreeBegin <= vertexDfi && vertexDfi <= subtreeEnd;
 }

@@ -9,14 +9,14 @@ BmKuratowskiPathMarker::BmKuratowskiPathMarker(
 )
     : state_(&state),
       markedOriginalEdges_(
-          static_cast<std::size_t>(state.graph().edgeCount()),
+          state.graph().edgeCount(),
           false
       ) {
 }
 
 void BmKuratowskiPathMarker::markOriginalEdge(int edgeId) {
     validateOriginalEdge(edgeId);
-    markedOriginalEdges_[static_cast<std::size_t>(edgeId)] = true;
+    markedOriginalEdges_[edgeId] = true;
 }
 
 void BmKuratowskiPathMarker::markDfsPath(
@@ -30,8 +30,8 @@ void BmKuratowskiPathMarker::markDfsPath(
     int current = descendantVertex;
 
     while (current != ancestorVertex) {
-        const int edgeId = dfsInfo.parentEdgeId[static_cast<std::size_t>(current)];
-        const int parent = dfsInfo.parent[static_cast<std::size_t>(current)];
+        const int edgeId = dfsInfo.parentEdgeId[current];
+        const int parent = dfsInfo.parent[current];
 
         if (edgeId == -1 || parent == -1) {
             throw std::invalid_argument(
@@ -82,14 +82,14 @@ void BmKuratowskiPathMarker::markRealExternalFacePath(
 
 bool BmKuratowskiPathMarker::isOriginalEdgeMarked(int edgeId) const {
     validateOriginalEdge(edgeId);
-    return markedOriginalEdges_[static_cast<std::size_t>(edgeId)];
+    return markedOriginalEdges_[edgeId];
 }
 
 std::vector<int> BmKuratowskiPathMarker::markedOriginalEdgeIds() const {
     std::vector<int> result;
 
-    for (int edgeId = 0; edgeId < static_cast<int>(markedOriginalEdges_.size()); ++edgeId) {
-        if (markedOriginalEdges_[static_cast<std::size_t>(edgeId)]) {
+    for (int edgeId = 0; edgeId < state_->graph().edgeCount(); ++edgeId) {
+        if (markedOriginalEdges_[edgeId]) {
             result.push_back(edgeId);
         }
     }

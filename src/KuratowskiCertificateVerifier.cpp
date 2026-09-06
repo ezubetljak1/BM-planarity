@@ -38,29 +38,29 @@ CertificateAnalysis analyzeEdgeSet(
     const int vertexCount = graph.vertexCount();
     const int edgeCount = graph.edgeCount();
 
-    std::vector<bool> selectedEdge(static_cast<std::size_t>(edgeCount), false);
+    std::vector<bool> selectedEdge(edgeCount, false);
     std::vector<std::vector<std::pair<int, int>>> adjacency(
-        static_cast<std::size_t>(vertexCount)
+        vertexCount
     );
 
     for (int edgeId : edgeIds) {
         require(edgeId >= 0 && edgeId < edgeCount,
                 "Kuratowski certificate contains an invalid original edge id.");
-        require(!selectedEdge[static_cast<std::size_t>(edgeId)],
+        require(!selectedEdge[edgeId],
                 "Kuratowski certificate contains a duplicate original edge id.");
 
-        selectedEdge[static_cast<std::size_t>(edgeId)] = true;
+        selectedEdge[edgeId] = true;
 
         const Edge& edge = graph.edge(edgeId);
-        adjacency[static_cast<std::size_t>(edge.u)].push_back({edge.v, edgeId});
-        adjacency[static_cast<std::size_t>(edge.v)].push_back({edge.u, edgeId});
+        adjacency[edge.u].push_back({edge.v, edgeId});
+        adjacency[edge.v].push_back({edge.u, edgeId});
     }
 
     std::vector<int> nonIsolatedVertices;
     std::vector<int> branchVertices;
 
     for (int vertex = 0; vertex < vertexCount; ++vertex) {
-        const int degree = static_cast<int>(adjacency[static_cast<std::size_t>(vertex)].size());
+        const int degree = adjacency[vertex].size();
 
         if (degree == 0) {
             continue;
@@ -83,13 +83,13 @@ CertificateAnalysis analyzeEdgeSet(
 
     if (branchVertices.size() == 5) {
         for (int vertex : branchVertices) {
-            require(adjacency[static_cast<std::size_t>(vertex)].size() == 4,
+            require(adjacency[vertex].size() == 4,
                     "A K5 subdivision must have five degree-4 branch vertices.");
         }
         type = KuratowskiType::K5;
     } else if (branchVertices.size() == 6) {
         for (int vertex : branchVertices) {
-            require(adjacency[static_cast<std::size_t>(vertex)].size() == 3,
+            require(adjacency[vertex].size() == 3,
                     "A K3,3 subdivision must have six degree-3 branch vertices.");
         }
         type = KuratowskiType::K33;
@@ -99,18 +99,19 @@ CertificateAnalysis analyzeEdgeSet(
         );
     }
 
-    std::vector<int> branchIndex(static_cast<std::size_t>(vertexCount), -1);
+    std::vector<int> branchIndex(vertexCount, -1);
 
-    for (int index = 0; index < static_cast<int>(branchVertices.size()); ++index) {
-        branchIndex[static_cast<std::size_t>(branchVertices[static_cast<std::size_t>(index)])] = index;
+    const int branchVertexCount = branchVertices.size();
+    for (int index = 0; index < branchVertexCount; ++index) {
+        branchIndex[branchVertices[index]] = index;
     }
 
-    std::vector<bool> visitedCertificateEdge(static_cast<std::size_t>(edgeCount), false);
+    std::vector<bool> visitedCertificateEdge(edgeCount, false);
     std::set<std::pair<int, int>> kernelEdges;
 
     for (int startBranch : branchVertices) {
-        for (const auto& [neighbor, firstEdgeId] : adjacency[static_cast<std::size_t>(startBranch)]) {
-            if (visitedCertificateEdge[static_cast<std::size_t>(firstEdgeId)]) {
+        for (const auto& [neighbor, firstEdgeId] : adjacency[startBranch]) {
+            if (visitedCertificateEdge[firstEdgeId]) {
                 continue;
             }
 
@@ -119,11 +120,11 @@ CertificateAnalysis analyzeEdgeSet(
             int currentEdgeId = firstEdgeId;
 
             while (true) {
-                require(!visitedCertificateEdge[static_cast<std::size_t>(currentEdgeId)],
+                require(!visitedCertificateEdge[currentEdgeId],
                         "Two suppressed certificate paths reuse an original edge.");
-                visitedCertificateEdge[static_cast<std::size_t>(currentEdgeId)] = true;
+                visitedCertificateEdge[currentEdgeId] = true;
 
-                if (branchIndex[static_cast<std::size_t>(current)] != -1) {
+                if (branchIndex[current] != -1) {
                     require(current != startBranch,
                             "A suppressed certificate path must connect two distinct branch vertices.");
 
@@ -133,7 +134,7 @@ CertificateAnalysis analyzeEdgeSet(
                     break;
                 }
 
-                const auto& currentAdjacency = adjacency[static_cast<std::size_t>(current)];
+                const auto& currentAdjacency = adjacency[current];
                 require(currentAdjacency.size() == 2,
                         "Every internal subdivision vertex must have degree 2.");
 
@@ -152,7 +153,7 @@ CertificateAnalysis analyzeEdgeSet(
     }
 
     for (int edgeId : edgeIds) {
-        require(visitedCertificateEdge[static_cast<std::size_t>(edgeId)],
+        require(visitedCertificateEdge[edgeId],
                 "Certificate contains an edge outside the suppressed Kuratowski kernel paths.");
     }
 
@@ -160,11 +161,11 @@ CertificateAnalysis analyzeEdgeSet(
         require(kernelEdges.size() == 10,
                 "A K5 subdivision must suppress to exactly ten kernel edges.");
 
-        for (int first = 0; first < static_cast<int>(branchVertices.size()); ++first) {
-            for (int second = first + 1; second < static_cast<int>(branchVertices.size()); ++second) {
+        for (int first = 0; first < branchVertexCount; ++first) {
+            for (int second = first + 1; second < branchVertexCount; ++second) {
                 const auto edge = std::minmax(
-                    branchVertices[static_cast<std::size_t>(first)],
-                    branchVertices[static_cast<std::size_t>(second)]
+                    branchVertices[first],
+                    branchVertices[second]
                 );
                 require(kernelEdges.contains(edge),
                         "Suppressed K5 certificate is missing a branch-vertex pair.");

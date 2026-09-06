@@ -61,8 +61,8 @@ int BmKuratowskiFailureFactory::firstChildBelowAncestor(
 
     int current = descendant;
 
-    while (current != -1 && dfsInfo.parent[static_cast<std::size_t>(current)] != ancestor) {
-        current = dfsInfo.parent[static_cast<std::size_t>(current)];
+    while (current != -1 && dfsInfo.parent[current] != ancestor) {
+        current = dfsInfo.parent[current];
     }
 
     if (current == -1) {

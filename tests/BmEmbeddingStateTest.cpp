@@ -125,9 +125,9 @@ BM_TEST(BmEmbeddingStateCreatesTreeBicompsInReverseDfiOrder) {
     BmEmbeddingState state(graph, dfsInfo);
 
     for (int i = dfsInfo.vertexCount - 1; i >= 0; --i) {
-        const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(i)];
+        const int vertex = dfsInfo.vertexAtDfsIndex[i];
 
-        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+        for (int child : dfsInfo.children[vertex]) {
             state.createTreeEdgeBicomp(vertex, child);
         }
     }

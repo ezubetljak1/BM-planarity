@@ -31,8 +31,8 @@ bool isTreeEdgeFromParentToChild(
         embedding.originalVertexForInternalVertex(halfEdge.to);
     const DfsInfo& dfsInfo = state.dfsInfo();
 
-    return dfsInfo.parent[static_cast<std::size_t>(childVertex)] == parentVertex
-        && dfsInfo.parentEdgeId[static_cast<std::size_t>(childVertex)]
+    return dfsInfo.parent[childVertex] == parentVertex
+        && dfsInfo.parentEdgeId[childVertex]
             == embedding.embeddedEdge(halfEdge.embeddedEdgeId).originalEdgeId;
 }
 
@@ -68,7 +68,7 @@ PlanarEmbedding BmEmbeddingRecovery::recover(BmEmbeddingState& state) {
 
 void BmEmbeddingRecovery::orientRemainingBicomps(BmEmbeddingState& state) {
     std::vector<bool> visited(
-        static_cast<std::size_t>(state.partialEmbedding().internalVertexCount()), false);
+        state.partialEmbedding().internalVertexCount(), false);
 
     for (int rootId = 0; rootId < state.bicompRootCount(); ++rootId) {
         if (state.bicompRoot(rootId).active) {
@@ -96,10 +96,10 @@ void BmEmbeddingRecovery::orientBicomp(
         const OrientationFrame frame = stack.back();
         stack.pop_back();
 
-        if (visited[static_cast<std::size_t>(frame.internalVertexId)]) {
+        if (visited[frame.internalVertexId]) {
             continue;
         }
-        visited[static_cast<std::size_t>(frame.internalVertexId)] = true;
+        visited[frame.internalVertexId] = true;
 
         if (frame.inverted) {
             embedding.reverseAdjacencyOrientation(frame.internalVertexId);
@@ -180,7 +180,7 @@ PlanarEmbedding BmEmbeddingRecovery::buildPublicEmbedding(
 
     PlanarEmbedding result;
     result.clockwiseEdgesAroundVertex.resize(
-        static_cast<std::size_t>(graph.vertexCount())
+        graph.vertexCount()
     );
 
     for (int vertex = 0; vertex < graph.vertexCount(); ++vertex) {
@@ -194,7 +194,7 @@ PlanarEmbedding BmEmbeddingRecovery::buildPublicEmbedding(
         }
 
         auto& rotation =
-            result.clockwiseEdgesAroundVertex[static_cast<std::size_t>(vertex)];
+            result.clockwiseEdgesAroundVertex[vertex];
 
         int current = first;
         int steps = 0;

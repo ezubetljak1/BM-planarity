@@ -114,15 +114,11 @@ BM_TEST(BmWalkupVisitedStopsDuplicatePertinentRootInsertion) {
     BmWalkup walkup;
     walkup.run(state, 0, 3);
 
-    const int sizeBefore = static_cast<int>(
-        state.vertexState(1).pertinentRoots.size()
-    );
+    const int sizeBefore = state.vertexState(1).pertinentRoots.size();
 
     walkup.run(state, 0, 2);
 
-    const int sizeAfter = static_cast<int>(
-        state.vertexState(1).pertinentRoots.size()
-    );
+    const int sizeAfter = state.vertexState(1).pertinentRoots.size();
 
     BM_ASSERT(state.hasBackedgeFlag(3, 0));
     BM_ASSERT(state.hasBackedgeFlag(2, 0));

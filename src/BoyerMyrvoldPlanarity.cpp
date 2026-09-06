@@ -22,16 +22,13 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
     // certifying BM core only on that linear-size prefix, then map the
     // witness back to original stable edge IDs.
     if (graph.vertexCount() >= 3) {
-        const long long sparseCertificateEdgeLimit =
-            3LL * static_cast<long long>(graph.vertexCount()) - 5LL;
+        const int sparseCertificateEdgeLimit = 3 * graph.vertexCount() - 5;
 
-        if (static_cast<long long>(graph.edgeCount()) > sparseCertificateEdgeLimit) {
-            const int sparseEdgeCount = static_cast<int>(sparseCertificateEdgeLimit);
+        if (graph.edgeCount() > sparseCertificateEdgeLimit) {
+            const int sparseEdgeCount = sparseCertificateEdgeLimit;
             Graph sparseGraph(graph.vertexCount());
             std::vector<int> originalEdgeIdBySparseEdge;
-            originalEdgeIdBySparseEdge.reserve(
-                static_cast<std::size_t>(sparseEdgeCount)
-            );
+            originalEdgeIdBySparseEdge.reserve(sparseEdgeCount);
 
             for (int originalEdgeId = 0;
                  originalEdgeId < sparseEdgeCount;
@@ -39,7 +36,8 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
                 const Edge& edge = graph.edge(originalEdgeId);
                 const int sparseEdgeId = sparseGraph.addEdge(edge.u, edge.v);
 
-                if (sparseEdgeId != static_cast<int>(originalEdgeIdBySparseEdge.size())) {
+                const int mappedEdgeCount = originalEdgeIdBySparseEdge.size();
+                if (sparseEdgeId != mappedEdgeCount) {
                     throw std::logic_error("Sparse certificate subgraph changed stable edge ordering.");
                 }
 
@@ -59,7 +57,7 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
 
             for (int sparseEdgeId : sparseResult.certificate->edgeIds) {
                 mappedEdgeIds.push_back(
-                    originalEdgeIdBySparseEdge.at(static_cast<std::size_t>(sparseEdgeId))
+                    originalEdgeIdBySparseEdge.at(sparseEdgeId)
                 );
             }
 
@@ -78,21 +76,21 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
     BmWalkdown walkdown;
 
     for (int dfi = dfsInfo.vertexCount - 1; dfi >= 0; --dfi) {
-        const int vertex = dfsInfo.vertexAtDfsIndex[static_cast<std::size_t>(dfi)];
+        const int vertex = dfsInfo.vertexAtDfsIndex[dfi];
 
-        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+        for (int child : dfsInfo.children[vertex]) {
             state.createTreeEdgeBicomp(vertex, child);
         }
 
         for (int backEdgeIndex :
-             dfsInfo.backEdgeIndicesFromAncestor[static_cast<std::size_t>(vertex)]) {
+             dfsInfo.backEdgeIndicesFromAncestor[vertex]) {
             const DfsBackEdge& backEdge =
-                dfsInfo.backEdges[static_cast<std::size_t>(backEdgeIndex)];
+                dfsInfo.backEdges[backEdgeIndex];
 
             walkup.run(state, vertex, backEdge.descendant, backEdge.edgeId);
         }
 
-        for (int child : dfsInfo.children[static_cast<std::size_t>(vertex)]) {
+        for (int child : dfsInfo.children[vertex]) {
             if (!state.hasPertinentRoots(child)) {
                 continue;
             }
@@ -115,9 +113,9 @@ PlanarityResult BoyerMyrvoldPlanarity::run(const Graph& graph) const {
         }
 
         for (int backEdgeIndex :
-             dfsInfo.backEdgeIndicesFromAncestor[static_cast<std::size_t>(vertex)]) {
+             dfsInfo.backEdgeIndicesFromAncestor[vertex]) {
             const DfsBackEdge& backEdge =
-                dfsInfo.backEdges[static_cast<std::size_t>(backEdgeIndex)];
+                dfsInfo.backEdges[backEdgeIndex];
 
             if (!state.isOriginalEdgeEmbedded(backEdge.edgeId)) {
                 return makeNonPlanarResult(

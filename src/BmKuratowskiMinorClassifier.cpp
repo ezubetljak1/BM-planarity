@@ -30,10 +30,10 @@ BmKuratowskiMinorType BmKuratowskiMinorClassifier::classifyInitial(
         const int lastRootId = roots.back();
         const int child = state.bicompRoot(lastRootId).childVertex;
         const int currentDfi = state.dfsInfo().dfsIndex[
-            static_cast<std::size_t>(context.currentVertex)
+            context.currentVertex
         ];
 
-        if (state.dfsInfo().lowpointDfi[static_cast<std::size_t>(child)] < currentDfi) {
+        if (state.dfsInfo().lowpointDfi[child] < currentDfi) {
             return BmKuratowskiMinorType::B;
         }
     }
@@ -62,10 +62,10 @@ BmKuratowskiMinorType BmKuratowskiMinorClassifier::classifyComplete(
     const int pyInternal = state.partialEmbedding().originalInternalVertex(context.py);
 
     const auto pxMark = context.obstructionMarksByInternalVertex[
-        static_cast<std::size_t>(pxInternal)
+        pxInternal
     ];
     const auto pyMark = context.obstructionMarksByInternalVertex[
-        static_cast<std::size_t>(pyInternal)
+        pyInternal
     ];
 
     if (pxMark == BmKuratowskiObstructionMark::HighRxw

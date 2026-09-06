@@ -49,7 +49,7 @@ int main() {
             }
 
             std::vector<int> certificateEdgeIds;
-            certificateEdgeIds.reserve(static_cast<std::size_t>(certificateEdgeCount));
+            certificateEdgeIds.reserve(certificateEdgeCount);
 
             for (int index = 0; index < certificateEdgeCount; ++index) {
                 int edgeId = -1;
