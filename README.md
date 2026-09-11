@@ -42,6 +42,82 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+## Korištenje biblioteke
+
+Biblioteka se može uključiti u drugi CMake projekat pomoću `add_subdirectory`
+i povezati sa izvršnim targetom preko `target_link_libraries`.
+
+Primjer `CMakeLists.txt`:
+
+```cmake
+add_subdirectory(BM-planarity)
+
+add_executable(my_app main.cpp)
+
+target_link_libraries(my_app PRIVATE bm_planarity)
+```
+
+U korisničkom kodu mogu se uključiti javni headeri:
+
+```cpp
+#include <bm/Graph.hpp>
+#include <bm/BoyerMyrvoldPlanarity.hpp>
+#include <bm/PlanarityResult.hpp>
+```
+
+Primjer korištenja:
+
+```cpp
+#include <bm/Graph.hpp>
+#include <bm/BoyerMyrvoldPlanarity.hpp>
+#include <bm/PlanarityResult.hpp>
+
+#include <iostream>
+
+int main() {
+    bm::Graph graph(4);
+
+    graph.addEdge(0, 1);
+    graph.addEdge(0, 2);
+    graph.addEdge(0, 3);
+    graph.addEdge(1, 2);
+    graph.addEdge(1, 3);
+    graph.addEdge(2, 3);
+
+    bm::BoyerMyrvoldPlanarity algorithm;
+    bm::PlanarityResult result = algorithm.run(graph);
+
+    if (result.planar) {
+        std::cout << "Graf je planaran.\n";
+
+        const auto& embedding = result.embedding->clockwiseEdgesAroundVertex;
+        std::cout << "Planarno ulaganje:\n";
+
+        for (int vertex = 0; vertex < embedding.size(); ++vertex) {
+            std::cout << "Vrh " << vertex << ": ";
+
+            for (int edgeId : embedding[vertex]) {
+                std::cout << edgeId << " ";
+            }
+            std::cout << "\n";
+        }
+    } else {
+        std::cout << "Graf nije planaran.\n";
+        const auto& certificate = result.certificate->edgeIds;
+
+        std::cout << "Kuratowskijev certifikat (ID-evi grana): ";
+        for (int edgeId : certificate) {
+            std::cout << edgeId << " ";
+        }
+
+        std::cout << "\n";
+    }
+}
+```
+
+Za planaran graf rezultat sadrži kombinatorno planarno ulaganje, dok za
+neplanaran graf sadrži Kuratowskijev certifikat.
+
 ## Python regresijski testovi
 
 Instalacija zavisnosti:
