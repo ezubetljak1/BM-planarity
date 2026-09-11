@@ -1,6 +1,7 @@
 # BM-Planarity
 
-C++20 implementacija Boyer-Myrvold algoritma za testiranje planarnosti grafa.
+C++ implementacija Boyer–Myrvold algoritma za testiranje planarnosti grafa,
+razvijena u skladu sa standardom C++20.
 
 Implementacija:
 
@@ -20,6 +21,8 @@ Za osnovni build potrebni su:
 - Ninja, opciono.
 
 Za regresijske testove potreban je i Python.
+
+Za pokretanje web demonstracijske aplikacije potrebni su Node.js i npm.
 
 ## Build i testovi
 
@@ -76,6 +79,7 @@ npm run dev
 
 Web aplikacija omogućava unos grafa, pokretanje testa planarnosti i
 vizuelni prikaz rezultata.
+
 
 ## Napomena
 
