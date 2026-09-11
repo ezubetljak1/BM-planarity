@@ -1,12 +1,12 @@
-# BM Planarity
+# BM-Planarity
 
-C++20 implementacija Boyer--Myrvold algoritma za testiranje planarnosti grafa.
+C++20 implementacija Boyer-Myrvold algoritma za testiranje planarnosti grafa.
 
 Implementacija:
 
 - donosi odluku da li je graf planaran;
 - za planarne grafove konstruiše kombinatorno planarno ulaganje;
-- za neplanarne grafove izdvaja Kuratowskijev certifikat tipa `K5` ili `K3,3`;
+- za neplanarne grafove izdvaja Kuratowskijev certifikat tipa K5 ili K3,3;
 - sadrži jedinične, regresijske i performansne testove;
 - uključuje opcionalnu web demonstracijsku aplikaciju.
 
