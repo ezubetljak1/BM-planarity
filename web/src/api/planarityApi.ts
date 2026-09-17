@@ -34,3 +34,14 @@ export async function analyzeGraph(
 
   return body;
 }
+
+export async function warmBackend(): Promise<void> {
+  try {
+    await fetch('/api/health', {
+      method: 'GET',
+      cache: 'no-store',
+    });
+  } catch {
+    // Best-effort warmup
+  }
+}

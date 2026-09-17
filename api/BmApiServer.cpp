@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <cstdlib>
 
 #ifdef BM_ENABLE_OGDF_LAYOUT
 #include "layout/OgdfPlanarLayoutAdapter.hpp"
@@ -18,8 +19,7 @@ namespace {
 using Json = nlohmann::json;
 
 void addCorsHeaders(httplib::Response& response) {
-    // za lokalni razvoj React frontend vjv ce raditi na drugom portu
-    // kasnije ograniciti na tacan FE origin
+    // Allow cross-origin access for local development and the public demo API.
     response.set_header("Access-Control-Allow-Origin", "*");
 
     response.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -136,9 +136,15 @@ int main() {
         }
     });
 
-    std::cout << "BM planarity API listening on http://127.0.0.1:8080\n";
-    
-    if (!server.listen("127.0.0.1", 8080)) {
+    int port = 8080;
+
+    if (const char* portValue = std::getenv("PORT")) {
+        port = std::stoi(portValue);
+    }
+
+    std::cout << "BM planarity API listening on 0.0.0.0:" << port << std::endl;
+
+    if (!server.listen("0.0.0.0", port)) {
         std::cerr << "Failed to start API server.\n";
 
         return 1;

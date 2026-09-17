@@ -1,14 +1,16 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
-  useState
+  useState,
 } from 'react';
 
 import './App.css';
 
 import {
-  analyzeGraph
+  analyzeGraph,
+  warmBackend
 } from './api/planarityApi';
 
 import {
@@ -307,6 +309,11 @@ function certificateTypeLabel(
 }
 
 function App() {
+  // Wake the backend early to reduce cold-start delay
+  useEffect(() => {
+    void warmBackend();
+  }, []);
+
   const [vertices, setVertices] =
     useState<GraphVertex[]>([]);
 

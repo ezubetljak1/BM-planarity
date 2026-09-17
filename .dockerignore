@@ -1,0 +1,14 @@
+.git
+build
+build-*
+results
+web/node_modules
+web/dist
+third_party/ogdf
+third_party/ogdf-build
+.vscode
+.idea
+__pycache__
+*.pyc
+*.pyo
+*.pyd
