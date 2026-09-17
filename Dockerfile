@@ -27,7 +27,8 @@ RUN cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DOGDF_WARNING_ERRORS=OFF \
-    -DOGDF_SEPARATE_TESTS=OFF
+    -DOGDF_SEPARATE_TESTS=OFF \
+    -DOGDF_ARCH=x86-64
 
 RUN cmake \
     --build /opt/ogdf-build \
