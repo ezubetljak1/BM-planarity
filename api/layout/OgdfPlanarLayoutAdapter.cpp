@@ -4,6 +4,8 @@
 #include <ogdf/basic/GraphAttributes.h>
 #include <ogdf/basic/List.h>
 #include <ogdf/planarlayout/PlanarStraightLayout.h>
+#include <ogdf/basic/simple_graph_alg.h>
+#include <ogdf/planarlayout/MixedModelLayout.h>
 
 #include <algorithm>
 #include <cmath>
@@ -159,17 +161,39 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
         attributes.height(vertex) = 36.0;
     }
 
-    std::cerr << "[OGDF] Creating PlanarStraightLayout" << std::endl;
+    const bool biconnected = ogdf::isBiconnected(ogdfGraph);
 
-    ogdf::PlanarStraightLayout layoutAlgorithm;
+    std::cerr << "[OGDF] biconnected="
+            << (biconnected ? "true" : "false")
+            << std::endl;
 
-    layoutAlgorithm.separation(72.0);
+    if (biconnected) {
+        std::cerr << "[OGDF] Using PlanarStraightLayout" << std::endl;
 
-    std::cerr << "[OGDF] BEFORE callFixEmbed" << std::endl;
+        ogdf::PlanarStraightLayout layoutAlgorithm;
+        layoutAlgorithm.separation(72.0);
 
-    layoutAlgorithm.callFixEmbed(attributes);
+        std::cerr << "[OGDF] BEFORE PlanarStraightLayout::callFixEmbed"
+                << std::endl;
 
-    std::cerr << "[OGDF] AFTER callFixEmbed" << std::endl;
+        layoutAlgorithm.callFixEmbed(attributes);
+
+        std::cerr << "[OGDF] AFTER PlanarStraightLayout::callFixEmbed"
+                << std::endl;
+    } else {
+        std::cerr << "[OGDF] Using MixedModelLayout" << std::endl;
+
+        ogdf::MixedModelLayout layoutAlgorithm;
+        layoutAlgorithm.separation(72.0);
+
+        std::cerr << "[OGDF] BEFORE MixedModelLayout::callFixEmbed"
+                << std::endl;
+
+        layoutAlgorithm.callFixEmbed(attributes);
+
+        std::cerr << "[OGDF] AFTER MixedModelLayout::callFixEmbed"
+                << std::endl;
+    }
 
     double minimumX = 0.0;
     double maximumX = 0.0;
