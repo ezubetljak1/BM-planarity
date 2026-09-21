@@ -30,7 +30,11 @@ RUN cmake \
     -DBUILD_SHARED_LIBS=OFF \
     -DOGDF_WARNING_ERRORS=OFF \
     -DOGDF_SEPARATE_TESTS=OFF \
-    -DOGDF_ARCH=x86-64
+    -DOGDF_ARCH=x86-64 \
+    -Dhas_sse3_pmmintrin=FALSE
+
+RUN grep -n "OGDF_SSE3_EXTENSIONS" \
+    /opt/ogdf-build/include/ogdf/basic/internal/config_autogen.h || true
 
 RUN cmake \
     --build /opt/ogdf-build \
