@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 namespace bm::layout {
 
@@ -88,7 +89,13 @@ RawComponentLayout layoutTrivialComponent(const std::vector<int>& vertices) {
 
 RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmbedding& embedding,
                                              const std::vector<int>& vertices) {
+    
+    std::cerr << "[OGDF] Starting layout conversion" << std::endl;
+
     ogdf::Graph ogdfGraph;
+
+    std::cerr << "[OGDF] Creating OGDF nodes" << std::endl;
+
     std::vector<ogdf::node> nodeByOriginalVertex(graph.vertexCount(), nullptr);
     std::vector<ogdf::edge> edgeByOriginalEdge(graph.edgeCount(), nullptr);
     std::vector<bool> belongsToComponent(graph.vertexCount(), false);
@@ -98,6 +105,8 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
 
         nodeByOriginalVertex[vertex] = ogdfGraph.newNode();
     }
+
+    std::cerr << "[OGDF] Creating OGDF edges" << std::endl;
 
     for (const bm::Edge& edge : graph.edges()) {
         const bool sourceBelongs = belongsToComponent[edge.u];
@@ -110,6 +119,8 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
         edgeByOriginalEdge[edge.id] =
             ogdfGraph.newEdge(nodeByOriginalVertex[edge.u], nodeByOriginalVertex[edge.v]);
     }
+
+    std::cerr << "[OGDF] Applying BM embedding / adjacency order" << std::endl;
 
     for (int vertex : vertices) {
         const ogdf::node ogdfNode = nodeByOriginalVertex[vertex];
@@ -126,9 +137,18 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
             adjacencyOrder.pushBack(ogdfEdge->getAdj(ogdfNode));
         }
 
-        if (adjacencyOrder.size() >= 2)
+        if (adjacencyOrder.size() >= 2) {
+            std::cerr << "[OGDF] BEFORE sort vertex=" << vertex
+                << ", rotationSize=" << adjacencyOrder.size()
+                << std::endl;
+
             ogdfGraph.sort(ogdfNode, adjacencyOrder);
+
+            std::cerr << "[OGDF] AFTER sort vertex=" << vertex << std::endl;
+        }
     }
+
+    std::cerr << "[OGDF] Creating GraphAttributes" << std::endl;
 
     ogdf::GraphAttributes attributes(ogdfGraph, ogdf::GraphAttributes::nodeGraphics |
                                                     ogdf::GraphAttributes::edgeGraphics);
@@ -139,11 +159,17 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
         attributes.height(vertex) = 36.0;
     }
 
+    std::cerr << "[OGDF] Creating PlanarStraightLayout" << std::endl;
+
     ogdf::PlanarStraightLayout layoutAlgorithm;
 
     layoutAlgorithm.separation(72.0);
 
+    std::cerr << "[OGDF] BEFORE callFixEmbed" << std::endl;
+
     layoutAlgorithm.callFixEmbed(attributes);
+
+    std::cerr << "[OGDF] AFTER callFixEmbed" << std::endl;
 
     double minimumX = 0.0;
     double maximumX = 0.0;
@@ -194,6 +220,8 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
 
                                      maximumY - attributes.y(ogdfNode)}});
     }
+
+    std::cerr << "[OGDF] Layout conversion completed" << std::endl;
 
     return result;
 }

@@ -25,6 +25,8 @@ RUN cmake \
     -B /opt/ogdf-build \
     -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG -march=x86-64 -mtune=generic" \
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
     -DBUILD_SHARED_LIBS=OFF \
     -DOGDF_WARNING_ERRORS=OFF \
     -DOGDF_SEPARATE_TESTS=OFF \
@@ -49,6 +51,8 @@ RUN cmake \
     -B build \
     -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG -march=x86-64 -mtune=generic" \
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
     -DBM_ENABLE_JSON_TOOLS=ON \
     -DBM_ENABLE_API_SERVER=ON \
     -DBM_ENABLE_OGDF_LAYOUT=ON \
