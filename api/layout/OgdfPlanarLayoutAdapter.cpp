@@ -3,7 +3,7 @@
 #include <ogdf/basic/Graph.h>
 #include <ogdf/basic/GraphAttributes.h>
 #include <ogdf/basic/List.h>
-#include <ogdf/planarlayout/PlanarStraightLayout.h>
+#include <ogdf/planarlayout/FPPLayout.h>
 
 #include <algorithm>
 #include <cmath>
@@ -161,7 +161,7 @@ RawComponentLayout layoutNonTrivialComponent(const Graph& graph, const PlanarEmb
 
     std::cerr << "[OGDF] Creating PlanarStraightLayout" << std::endl;
 
-    ogdf::PlanarStraightLayout layoutAlgorithm;
+    ogdf::FPPLayout layoutAlgorithm;
 
     layoutAlgorithm.separation(72.0);
 
