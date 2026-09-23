@@ -11,6 +11,12 @@ Implementacija:
 - sadrži jedinične, regresijske i performansne testove;
 - uključuje opcionalnu web demonstracijsku aplikaciju.
 
+## Demo
+
+Demo verzija aplikacije dostupna je na:
+**https://bm-planarity.onrender.com/**
+
+> **Note:** Aplikacija je hostovana na Render Free planu, koji automatski uspava backend servis nakon perioda neaktivnosti. Zbog toga prvi zahtjev nakon duže pauze može trajati približno **50 sekundi**, dok se servis ponovo pokrene. Nakon toga aplikacija radi normalno.
 
 ## Zahtjevi
 
